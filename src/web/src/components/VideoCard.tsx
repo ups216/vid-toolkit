@@ -4,7 +4,7 @@ import { Play, Download, Calendar, Clock, FileVideo } from 'lucide-react';
 interface Video {
   id: string;
   title: string;
-  thumbnail: string;
+  thumbnail_url: string;
   duration: string;
   format: string;
   fileSize: string;
@@ -31,7 +31,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onPlay, onDownload }) => {
     >
       <div className="relative aspect-video bg-slate-700">
         <img
-          src={video.thumbnail}
+          src={video.thumbnail_url}
           alt={video.title}
           className="w-full h-full object-cover"
         />

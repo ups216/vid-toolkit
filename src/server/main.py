@@ -63,10 +63,10 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 OUTPUTS_DIR = Path("outputs")
 OUTPUTS_DIR.mkdir(exist_ok=True)
 
-DOWNLOAD_TMP_DIR = Path("/data/leixu/source/vid-toolkit/src/server/download_tmp")
+DOWNLOAD_TMP_DIR = Path("download_tmp")
 DOWNLOAD_TMP_DIR.mkdir(parents=True, exist_ok=True)
 
-VIDEO_LIBRARY_DIR = Path("/data/leixu/source/vid-toolkit/src/server/video_library")
+VIDEO_LIBRARY_DIR = Path("video_library")
 VIDEO_LIBRARY_DIR.mkdir(parents=True, exist_ok=True)
 
 VIDEO_LIBRARY_DATA_FILE = VIDEO_LIBRARY_DIR / "data.json"
@@ -85,7 +85,13 @@ async def upload_video(file: UploadFile = File(...)):
     file_id = str(uuid.uuid4())
     file_extension = Path(file.filename).suffix
     filename = f"{file_id}{file_extension}"
-    file_path = UPLOADS_DIR / filename
+    
+    # Resolve relative path if needed
+    uploads_dir = UPLOADS_DIR
+    if not uploads_dir.is_absolute():
+        uploads_dir = Path.cwd() / uploads_dir
+    
+    file_path = uploads_dir / filename
     
     # Save uploaded file
     with open(file_path, "wb") as buffer:
@@ -102,13 +108,23 @@ async def upload_video(file: UploadFile = File(...)):
 async def convert_video(file_id: str, output_format: str = "mp4"):
     """Convert video to different format"""
     # Find the uploaded file
-    input_files = list(UPLOADS_DIR.glob(f"{file_id}.*"))
+    uploads_dir = UPLOADS_DIR
+    if not uploads_dir.is_absolute():
+        uploads_dir = Path.cwd() / uploads_dir
+    
+    input_files = list(uploads_dir.glob(f"{file_id}.*"))
     if not input_files:
         raise HTTPException(status_code=404, detail="File not found")
     
     input_file = input_files[0]
     output_filename = f"{file_id}_converted.{output_format}"
-    output_path = OUTPUTS_DIR / output_filename
+    
+    # Resolve relative path if needed
+    outputs_dir = OUTPUTS_DIR
+    if not outputs_dir.is_absolute():
+        outputs_dir = Path.cwd() / outputs_dir
+    
+    output_path = outputs_dir / output_filename
     
     # TODO: Implement actual video conversion using ffmpeg
     # For now, just copy the file as a placeholder
@@ -123,12 +139,22 @@ async def convert_video(file_id: str, output_format: str = "mp4"):
 @app.post("/extract-audio/{file_id}")
 async def extract_audio(file_id: str, output_format: str = "mp3"):
     """Extract audio from video"""
-    input_files = list(UPLOADS_DIR.glob(f"{file_id}.*"))
+    uploads_dir = UPLOADS_DIR
+    if not uploads_dir.is_absolute():
+        uploads_dir = Path.cwd() / uploads_dir
+    
+    input_files = list(uploads_dir.glob(f"{file_id}.*"))
     if not input_files:
         raise HTTPException(status_code=404, detail="File not found")
     
     output_filename = f"{file_id}_audio.{output_format}"
-    output_path = OUTPUTS_DIR / output_filename
+    
+    # Resolve relative path if needed
+    outputs_dir = OUTPUTS_DIR
+    if not outputs_dir.is_absolute():
+        outputs_dir = Path.cwd() / outputs_dir
+    
+    output_path = outputs_dir / output_filename
     
     # TODO: Implement actual audio extraction using ffmpeg
     # For now, create a placeholder file
@@ -143,12 +169,22 @@ async def extract_audio(file_id: str, output_format: str = "mp3"):
 @app.post("/thumbnail/{file_id}")
 async def generate_thumbnail(file_id: str, timestamp: float = 1.0):
     """Generate thumbnail from video"""
-    input_files = list(UPLOADS_DIR.glob(f"{file_id}.*"))
+    uploads_dir = UPLOADS_DIR
+    if not uploads_dir.is_absolute():
+        uploads_dir = Path.cwd() / uploads_dir
+    
+    input_files = list(uploads_dir.glob(f"{file_id}.*"))
     if not input_files:
         raise HTTPException(status_code=404, detail="File not found")
     
     output_filename = f"{file_id}_thumbnail.jpg"
-    output_path = OUTPUTS_DIR / output_filename
+    
+    # Resolve relative path if needed
+    outputs_dir = OUTPUTS_DIR
+    if not outputs_dir.is_absolute():
+        outputs_dir = Path.cwd() / outputs_dir
+    
+    output_path = outputs_dir / output_filename
     
     # TODO: Implement actual thumbnail generation using ffmpeg
     # For now, create a placeholder file
@@ -163,13 +199,23 @@ async def generate_thumbnail(file_id: str, timestamp: float = 1.0):
 @app.post("/compress/{file_id}")
 async def compress_video(file_id: str, quality: str = "medium"):
     """Compress video file"""
-    input_files = list(UPLOADS_DIR.glob(f"{file_id}.*"))
+    uploads_dir = UPLOADS_DIR
+    if not uploads_dir.is_absolute():
+        uploads_dir = Path.cwd() / uploads_dir
+    
+    input_files = list(uploads_dir.glob(f"{file_id}.*"))
     if not input_files:
         raise HTTPException(status_code=404, detail="File not found")
     
     input_file = input_files[0]
     output_filename = f"{file_id}_compressed{input_file.suffix}"
-    output_path = OUTPUTS_DIR / output_filename
+    
+    # Resolve relative path if needed
+    outputs_dir = OUTPUTS_DIR
+    if not outputs_dir.is_absolute():
+        outputs_dir = Path.cwd() / outputs_dir
+    
+    output_path = outputs_dir / output_filename
     
     # TODO: Implement actual video compression using ffmpeg
     # For now, just copy the file as a placeholder
@@ -285,11 +331,17 @@ async def download_video_from_page(request: VideoDownloadRequest):
         # Generate unique filename for this download
         download_id = str(uuid.uuid4())
         
-        # Run yt-dlp to download the specific format
+        # Resolve relative path if needed
+        download_tmp_dir = DOWNLOAD_TMP_DIR
+        if not download_tmp_dir.is_absolute():
+            download_tmp_dir = Path.cwd() / download_tmp_dir
+        
+        # Run yt-dlp to download the specific format and thumbnail
         cmd = [
             "yt-dlp",
             "--format", request.format_id,
-            "--output", str(DOWNLOAD_TMP_DIR / f"{download_id}.%(ext)s"),
+            "--output", str(download_tmp_dir / f"{download_id}_%(id)s.%(ext)s"),
+            "--write-thumbnail",
             "--cookies", "/home/azureuser/source/cookies.txt",
             request.url
         ]
@@ -307,17 +359,23 @@ async def download_video_from_page(request: VideoDownloadRequest):
                 detail=f"Failed to download video: {result.stderr}"
             )
         
-        # Find the downloaded file
-        downloaded_files = list(DOWNLOAD_TMP_DIR.glob(f"{download_id}.*"))
-        if not downloaded_files:
+        # Find the downloaded video file
+        downloaded_files = list(download_tmp_dir.glob(f"{download_id}_*"))
+        video_files = [f for f in downloaded_files if not f.name.endswith(('.jpg', '.jpeg', '.png', '.webp'))]
+        
+        if not video_files:
             raise HTTPException(
                 status_code=500, 
-                detail="Download completed but file not found"
+                detail="Download completed but video file not found"
             )
         
-        downloaded_file = downloaded_files[0]
+        downloaded_file = video_files[0]
         
-        return {
+        # Find the downloaded thumbnail file
+        thumbnail_files = [f for f in downloaded_files if f.name.endswith(('.jpg', '.jpeg', '.png', '.webp'))]
+        thumbnail_file = thumbnail_files[0] if thumbnail_files else None
+        
+        response_data = {
             "message": "Video download completed",
             "download_id": download_id,
             "filename": downloaded_file.name,
@@ -326,6 +384,14 @@ async def download_video_from_page(request: VideoDownloadRequest):
             "url": request.url,
             "format_id": request.format_id
         }
+        
+        # Add thumbnail information if available
+        if thumbnail_file:
+            response_data["thumbnail_filename"] = thumbnail_file.name
+            response_data["thumbnail_path"] = str(thumbnail_file)
+            response_data["thumbnail_size"] = thumbnail_file.stat().st_size
+        
+        return response_data
         
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=408, detail="Download timeout - Video download took too long")
@@ -336,8 +402,17 @@ async def download_video_from_page(request: VideoDownloadRequest):
 async def save_video_to_library(request: VideoSaveRequest):
     """Move downloaded video to video library and update metadata"""
     try:
+        # Resolve relative paths if needed
+        download_tmp_dir = DOWNLOAD_TMP_DIR
+        if not download_tmp_dir.is_absolute():
+            download_tmp_dir = Path.cwd() / download_tmp_dir
+        
+        video_library_dir = VIDEO_LIBRARY_DIR
+        if not video_library_dir.is_absolute():
+            video_library_dir = Path.cwd() / video_library_dir
+        
         # Check if the source file exists in download_tmp
-        source_file = DOWNLOAD_TMP_DIR / request.video_file_name
+        source_file = download_tmp_dir / request.video_file_name
         if not source_file.exists():
             raise HTTPException(
                 status_code=404, 
@@ -398,51 +473,84 @@ async def save_video_to_library(request: VideoSaveRequest):
         file_extension = source_file.suffix
         clean_name = "".join(c for c in video_page_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
         clean_name = clean_name.replace(' ', '_')
-        library_filename = f"{clean_name}_{str(uuid.uuid4())[:8]}{file_extension}"
+        unique_id = str(uuid.uuid4())[:8]
+        library_filename = f"{clean_name}_{unique_id}{file_extension}"
         
-        # Move file to video library
-        destination_file = VIDEO_LIBRARY_DIR / library_filename
+        # Move video file to video library
+        destination_file = video_library_dir / library_filename
         source_file.rename(destination_file)
+        
+        # Look for and move thumbnail file if it exists
+        thumbnail_destination = None
+        thumbnail_filename = None
+        source_file_stem = source_file.stem  # filename without extension
+        
+        # Search for thumbnail files with the same base name
+        for thumb_ext in ['.jpg', '.jpeg', '.png', '.webp']:
+            potential_thumb = download_tmp_dir / f"{source_file_stem}{thumb_ext}"
+            if potential_thumb.exists():
+                thumbnail_filename = f"{clean_name}_{unique_id}{thumb_ext}"
+                thumbnail_destination = video_library_dir / thumbnail_filename
+                potential_thumb.rename(thumbnail_destination)
+                break
         
         # Load existing data or create new
         video_data = []
-        if VIDEO_LIBRARY_DATA_FILE.exists():
-            with open(VIDEO_LIBRARY_DATA_FILE, 'r', encoding='utf-8') as f:
+        video_library_data_file = VIDEO_LIBRARY_DATA_FILE
+        if not video_library_data_file.is_absolute():
+            video_library_data_file = Path.cwd() / video_library_data_file
+        
+        if video_library_data_file.exists():
+            with open(video_library_data_file, 'r', encoding='utf-8') as f:
                 video_data = json.load(f)
         
         # Generate video ID
         video_id = str(uuid.uuid4())
         
-        # Add new video entry
+        # Add new video entry (store relative paths for portability)
         new_entry = {
             "id": video_id,
             "video_url": request.video_url,
             "video_page_name": video_page_name,
             "original_file_name": request.video_file_name,
             "library_file_name": library_filename,
-            "file_path": str(destination_file),
+            "file_path": str(destination_file.relative_to(Path.cwd())),
             "file_size": destination_file.stat().st_size,
             "video_local_url": f"/videopage_file/{video_id}",
             "video_direct_url": f"/video_library/{library_filename}",
             "saved_at": datetime.now().isoformat(),
         }
         
+        # Add thumbnail information if available
+        if thumbnail_destination and thumbnail_filename:
+            new_entry["thumbnail_filename"] = thumbnail_filename
+            new_entry["thumbnail_path"] = str(thumbnail_destination.relative_to(Path.cwd()))
+            new_entry["thumbnail_url"] = f"/video_library/{thumbnail_filename}"
+        
         video_data.append(new_entry)
         
         # Save updated data
-        with open(VIDEO_LIBRARY_DATA_FILE, 'w', encoding='utf-8') as f:
+        with open(video_library_data_file, 'w', encoding='utf-8') as f:
             json.dump(video_data, f, indent=2, ensure_ascii=False)
         
-        return {
+        response_data = {
             "message": "Video saved to library successfully",
             "video_id": new_entry["id"],
             "library_file_name": library_filename,
-            "file_path": str(destination_file),
+            "file_path": str(destination_file.relative_to(Path.cwd())),
             "file_size": new_entry["file_size"],
             "video_local_url": new_entry["video_local_url"],
             "video_direct_url": new_entry["video_direct_url"],
             "total_videos_in_library": len(video_data)
         }
+        
+        # Add thumbnail information to response if available
+        if thumbnail_destination and thumbnail_filename:
+            response_data["thumbnail_filename"] = thumbnail_filename
+            response_data["thumbnail_path"] = str(thumbnail_destination.relative_to(Path.cwd()))
+            response_data["thumbnail_url"] = f"/video_library/{thumbnail_filename}"
+        
+        return response_data
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
@@ -451,8 +559,13 @@ async def save_video_to_library(request: VideoSaveRequest):
 async def list_saved_videos():
     """Get list of all saved videos from the library"""
     try:
+        # Resolve relative path if needed
+        video_library_data_file = VIDEO_LIBRARY_DATA_FILE
+        if not video_library_data_file.is_absolute():
+            video_library_data_file = Path.cwd() / video_library_data_file
+        
         # Check if data file exists
-        if not VIDEO_LIBRARY_DATA_FILE.exists():
+        if not video_library_data_file.exists():
             return {
                 "message": "No videos in library",
                 "total_videos": 0,
@@ -460,7 +573,7 @@ async def list_saved_videos():
             }
         
         # Load and return video data
-        with open(VIDEO_LIBRARY_DATA_FILE, 'r', encoding='utf-8') as f:
+        with open(video_library_data_file, 'r', encoding='utf-8') as f:
             video_data = json.load(f)
         
         return {
@@ -479,12 +592,17 @@ async def list_saved_videos():
 async def get_video_file(video_id: str):
     """Serve a video file from the library by video ID"""
     try:
+        # Resolve relative path if needed
+        video_library_data_file = VIDEO_LIBRARY_DATA_FILE
+        if not video_library_data_file.is_absolute():
+            video_library_data_file = Path.cwd() / video_library_data_file
+        
         # Check if data file exists
-        if not VIDEO_LIBRARY_DATA_FILE.exists():
+        if not video_library_data_file.exists():
             raise HTTPException(status_code=404, detail="Video library not found")
         
         # Load video data
-        with open(VIDEO_LIBRARY_DATA_FILE, 'r', encoding='utf-8') as f:
+        with open(video_library_data_file, 'r', encoding='utf-8') as f:
             video_data = json.load(f)
         
         # Find the video by ID
@@ -497,8 +615,10 @@ async def get_video_file(video_id: str):
         if not video_entry:
             raise HTTPException(status_code=404, detail="Video not found")
         
-        # Check if the file exists
+        # Check if the file exists (resolve relative path)
         file_path = Path(video_entry['file_path'])
+        if not file_path.is_absolute():
+            file_path = Path.cwd() / file_path
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="Video file not found on disk")
         
@@ -518,7 +638,12 @@ async def get_video_file(video_id: str):
 @app.head("/video_library/{filename}")
 async def serve_video_library_file(filename: str):
     """Serve video files directly from the video library folder"""
-    file_path = VIDEO_LIBRARY_DIR / filename
+    # Resolve relative path if needed
+    library_dir = VIDEO_LIBRARY_DIR
+    if not library_dir.is_absolute():
+        library_dir = Path.cwd() / library_dir
+    
+    file_path = library_dir / filename
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Video file not found")
     
@@ -543,7 +668,12 @@ async def serve_video_library_file(filename: str):
 @app.get("/download/{filename}")
 async def download_file(filename: str):
     """Download processed file"""
-    file_path = OUTPUTS_DIR / filename
+    # Resolve relative path if needed
+    outputs_dir = OUTPUTS_DIR
+    if not outputs_dir.is_absolute():
+        outputs_dir = Path.cwd() / outputs_dir
+    
+    file_path = outputs_dir / filename
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     

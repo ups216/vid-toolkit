@@ -5,7 +5,7 @@ import VideoCard from './VideoCard';
 interface Video {
   id: string;
   title: string;
-  thumbnail: string;
+  thumbnail_url: string;
   duration: string;
   format: string;
   fileSize: string;
@@ -26,6 +26,7 @@ interface ApiVideo {
   saved_at: string;
   video_local_url?: string;
   video_direct_url?: string;
+  thumbnail_url?: string;
 }
 
 interface VideoLibraryProps {
@@ -69,7 +70,7 @@ const VideoLibrary: React.FC<VideoLibraryProps> = ({ onPlayVideo, onDownloadVide
     return {
       id: apiVideo.id,
       title: apiVideo.video_page_name,
-      thumbnail: `https://i.ytimg.com/vi/${apiVideo.video_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)?.[1] || 'default'}/hqdefault.jpg`,
+      thumbnail_url: `http://localhost:6800${apiVideo.thumbnail_url}`,
       duration: 'N/A', // Duration not available in API response
       format: getFileExtension(apiVideo.library_file_name),
       fileSize: formatFileSize(apiVideo.file_size),
