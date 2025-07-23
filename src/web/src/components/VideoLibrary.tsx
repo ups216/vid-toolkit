@@ -1,5 +1,5 @@
-import React from 'react';
-import { Search, Play, Download, ExternalLink, FileVideo, Calendar, HardDrive, Grid3X3, List } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Play, Download, ExternalLink, FileVideo, Calendar, HardDrive, Grid3X3, List, Loader2 } from 'lucide-react';
 import VideoCard from './VideoCard';
 
 interface Video {
@@ -11,21 +11,138 @@ interface Video {
   fileSize: string;
   downloadedAt: string;
   url: string;
+  video_local_url?: string;
+  video_direct_url?: string;
+}
+
+interface ApiVideo {
+  id: string;
+  video_url: string;
+  video_page_name: string;
+  original_file_name: string;
+  library_file_name: string;
+  file_path: string;
+  file_size: number;
+  saved_at: string;
+  video_local_url?: string;
+  video_direct_url?: string;
 }
 
 interface VideoLibraryProps {
-  videos: Video[];
   onPlayVideo: (video: Video) => void;
   onDownloadVideo: (video: Video) => void;
 }
 
-const VideoLibrary: React.FC<VideoLibraryProps> = ({ videos, onPlayVideo, onDownloadVideo }) => {
+const VideoLibrary: React.FC<VideoLibraryProps> = ({ onPlayVideo, onDownloadVideo }) => {
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [viewMode, setViewMode] = React.useState<'gallery' | 'list'>('gallery');
+
+  // Helper function to format file size
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // Helper function to format date
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // Helper function to get file extension
+  const getFileExtension = (filename: string): string => {
+    return filename.split('.').pop()?.toUpperCase() || 'MP4';
+  };
+
+  // Transform API video to UI video format
+  const transformApiVideo = (apiVideo: ApiVideo): Video => {
+    return {
+      id: apiVideo.id,
+      title: apiVideo.video_page_name,
+      thumbnail: `https://i.ytimg.com/vi/${apiVideo.video_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)?.[1] || 'default'}/hqdefault.jpg`,
+      duration: 'N/A', // Duration not available in API response
+      format: getFileExtension(apiVideo.library_file_name),
+      fileSize: formatFileSize(apiVideo.file_size),
+      downloadedAt: formatDate(apiVideo.saved_at),
+      url: apiVideo.video_url,
+      video_local_url: apiVideo.video_local_url,
+      video_direct_url: apiVideo.video_direct_url
+    };
+  };
+
+  // Fetch videos from API
+  const fetchVideos = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch('http://localhost:6800/videopage_list');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const transformedVideos = data.videos.map(transformApiVideo);
+      setVideos(transformedVideos);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch videos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch videos on component mount
+  useEffect(() => {
+    fetchVideos();
+  }, []);
 
   const filteredVideos = videos.filter(video =>
     video.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 text-blue-500 animate-spin mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">Loading videos...</h3>
+            <p className="text-slate-400">Fetching your video library</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-16">
+          <div className="bg-red-500/10 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-4">
+            <ExternalLink className="h-12 w-12 text-red-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">Failed to load videos</h3>
+          <p className="text-slate-400 mb-4">{error}</p>
+          <button
+            onClick={fetchVideos}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -38,6 +155,16 @@ const VideoLibrary: React.FC<VideoLibraryProps> = ({ videos, onPlayVideo, onDown
         </div>
 
         <div className="flex items-center space-x-4">
+          <button
+            onClick={fetchVideos}
+            disabled={loading}
+            className="bg-slate-700/50 hover:bg-slate-600/50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-300 hover:text-white px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2"
+            title="Refresh library"
+          >
+            <Loader2 className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <span className="text-sm">Refresh</span>
+          </button>
+          
           <div className="flex bg-slate-800/50 rounded-lg p-1 border border-slate-600">
             <button
               onClick={() => setViewMode('gallery')}

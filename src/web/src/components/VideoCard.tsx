@@ -10,6 +10,8 @@ interface Video {
   fileSize: string;
   downloadedAt: string;
   url: string;
+  video_local_url?: string;
+  video_direct_url?: string;
 }
 
 interface VideoCardProps {

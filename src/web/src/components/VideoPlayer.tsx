@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Download, ExternalLink } from 'lucide-react';
 
 interface Video {
@@ -10,6 +11,8 @@ interface Video {
   fileSize: string;
   downloadedAt: string;
   url: string;
+  video_local_url?: string;
+  video_direct_url?: string;
 }
 
 interface VideoPlayerProps {
@@ -20,9 +23,46 @@ interface VideoPlayerProps {
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isOpen, onClose, onDownload }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Reset video state when modal opens/closes
+  useEffect(() => {
+    if (isOpen && video) {
+      setIsPlaying(false);
+      setHasError(false);
+      setIsLoading(true);
+    }
+  }, [isOpen, video]);
+
+  // Cleanup when component unmounts or modal closes
+  useEffect(() => {
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    };
+  }, [isOpen]);
+
   if (!isOpen || !video) return null;
 
-  return (
+  const handleVideoLoad = () => {
+    setIsLoading(false);
+    setHasError(false);
+  };
+
+  const handleVideoError = () => {
+    setIsLoading(false);
+    setHasError(true);
+  };
+
+  const handlePlay = () => setIsPlaying(true);
+  const handlePause = () => setIsPlaying(false);
+
+  return createPortal(
     <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-slate-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-slate-700">
         <div className="flex items-center justify-between p-6 border-b border-slate-700">
@@ -38,12 +78,40 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isOpen, onClose, onDow
           </button>
         </div>
 
-        <div className="aspect-video bg-black">
-          <img
-            src={video.thumbnail}
-            alt={video.title}
-            className="w-full h-full object-cover"
-          />
+        <div className="aspect-video bg-black relative">
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            </div>
+          )}
+          {hasError ? (
+            <div className="w-full h-full flex flex-col items-center justify-center text-white">
+              <div className="text-red-500 mb-4">
+                <X className="h-16 w-16" />
+              </div>
+              <p className="text-lg mb-2">Failed to load video</p>
+              <p className="text-slate-400 text-sm text-center px-4">
+                The video format may not be supported or the file may be corrupted.
+              </p>
+            </div>
+          ) : (
+            <>
+              <video
+                ref={videoRef}
+                src={video.video_local_url ? `http://localhost:6800${video.video_local_url}` : video.url}
+                poster={video.thumbnail}
+                controls
+                className="w-full h-full"
+                preload="metadata"
+                onLoadedData={handleVideoLoad}
+                onError={handleVideoError}
+                onPlay={handlePlay}
+                onPause={handlePause}
+              >
+                Your browser does not support the video tag.
+              </video>
+            </>
+          )}
         </div>
 
         <div className="p-6 border-t border-slate-700">
@@ -65,7 +133,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isOpen, onClose, onDow
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

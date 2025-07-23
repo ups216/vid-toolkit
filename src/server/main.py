@@ -50,7 +50,7 @@ class VideoInfo(BaseModel):
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite dev server
+    allow_origins=["*"],  # Allow any origin
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -410,15 +410,20 @@ async def save_video_to_library(request: VideoSaveRequest):
             with open(VIDEO_LIBRARY_DATA_FILE, 'r', encoding='utf-8') as f:
                 video_data = json.load(f)
         
+        # Generate video ID
+        video_id = str(uuid.uuid4())
+        
         # Add new video entry
         new_entry = {
-            "id": str(uuid.uuid4()),
+            "id": video_id,
             "video_url": request.video_url,
             "video_page_name": video_page_name,
             "original_file_name": request.video_file_name,
             "library_file_name": library_filename,
             "file_path": str(destination_file),
             "file_size": destination_file.stat().st_size,
+            "video_local_url": f"/videopage_file/{video_id}",
+            "video_direct_url": f"/video_library/{library_filename}",
             "saved_at": datetime.now().isoformat(),
         }
         
@@ -434,6 +439,8 @@ async def save_video_to_library(request: VideoSaveRequest):
             "library_file_name": library_filename,
             "file_path": str(destination_file),
             "file_size": new_entry["file_size"],
+            "video_local_url": new_entry["video_local_url"],
+            "video_direct_url": new_entry["video_direct_url"],
             "total_videos_in_library": len(video_data)
         }
         
@@ -468,6 +475,7 @@ async def list_saved_videos():
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.get("/videopage_file/{video_id}")
+@app.head("/videopage_file/{video_id}")
 async def get_video_file(video_id: str):
     """Serve a video file from the library by video ID"""
     try:
@@ -506,6 +514,32 @@ async def get_video_file(video_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+@app.get("/video_library/{filename}")
+@app.head("/video_library/{filename}")
+async def serve_video_library_file(filename: str):
+    """Serve video files directly from the video library folder"""
+    file_path = VIDEO_LIBRARY_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Video file not found")
+    
+    # Determine media type based on file extension
+    file_extension = file_path.suffix.lower()
+    media_type = "video/mp4"  # Default
+    if file_extension == ".webm":
+        media_type = "video/webm"
+    elif file_extension == ".avi":
+        media_type = "video/x-msvideo"
+    elif file_extension == ".mov":
+        media_type = "video/quicktime"
+    elif file_extension == ".mkv":
+        media_type = "video/x-matroska"
+    
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type=media_type
+    )
+
 @app.get("/download/{filename}")
 async def download_file(filename: str):
     """Download processed file"""
@@ -521,4 +555,4 @@ async def download_file(filename: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=6800)

@@ -13,51 +13,11 @@ interface Video {
   fileSize: string;
   downloadedAt: string;
   url: string;
+  video_local_url?: string;
+  video_direct_url?: string;
 }
 
 function App() {
-  const [videos, setVideos] = useState<Video[]>([
-    {
-      id: '1',
-      title: 'Amazing Nature Documentary - Wildlife in 4K',
-      thumbnail: 'https://images.pexels.com/photos/1174732/pexels-photo-1174732.jpeg?auto=compress&cs=tinysrgb&w=500',
-      duration: '15:42',
-      format: '1080p',
-      fileSize: '245 MB',
-      downloadedAt: '2 hours ago',
-      url: 'https://example.com/video1'
-    },
-    {
-      id: '2',
-      title: 'Coding Tutorial: React Hooks Explained',
-      thumbnail: 'https://images.pexels.com/photos/11035380/pexels-photo-11035380.jpeg?auto=compress&cs=tinysrgb&w=500',
-      duration: '23:15',
-      format: '720p',
-      fileSize: '187 MB',
-      downloadedAt: '1 day ago',
-      url: 'https://example.com/video2'
-    },
-    {
-      id: '3',
-      title: 'Beautiful Sunset Timelapse',
-      thumbnail: 'https://images.pexels.com/photos/158163/clouds-cloudporn-weather-lookup-158163.jpeg?auto=compress&cs=tinysrgb&w=500',
-      duration: '5:30',
-      format: '4K',
-      fileSize: '892 MB',
-      downloadedAt: '3 days ago',
-      url: 'https://example.com/video3'
-    },
-    {
-      id: '4',
-      title: 'Music Performance - Live Concert',
-      thumbnail: 'https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=500',
-      duration: '45:18',
-      format: '1080p',
-      fileSize: '1.2 GB',
-      downloadedAt: '1 week ago',
-      url: 'https://example.com/video4'
-    }
-  ]);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -66,22 +26,10 @@ function App() {
   const handleVideoSubmit = async (url: string, format: string) => {
     setIsProcessing(true);
     
-    // Simulate processing delay
+    // TODO: Implement actual video download logic
+    // This would call the /videopage_analyze, /videopage_download, and /videopage_save endpoints
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Create a new video entry
-    const newVideo: Video = {
-      id: Date.now().toString(),
-      title: `Downloaded Video - ${format}`,
-      thumbnail: 'https://images.pexels.com/photos/1714208/pexels-photo-1714208.jpeg?auto=compress&cs=tinysrgb&w=500',
-      duration: '12:34',
-      format: format,
-      fileSize: format === '4K' ? '750 MB' : format === '1080p' ? '320 MB' : '180 MB',
-      downloadedAt: 'Just now',
-      url: url
-    };
-
-    setVideos(prevVideos => [newVideo, ...prevVideos]);
     setIsProcessing(false);
   };
 
@@ -91,10 +39,15 @@ function App() {
   };
 
   const handleDownloadVideo = (video: Video) => {
-    // Simulate download
+    // Use video_direct_url for local downloads if available, otherwise fallback to original URL
+    const downloadUrl = video.video_direct_url 
+      ? `http://localhost:6800${video.video_direct_url}`
+      : video.url;
+    
     const link = document.createElement('a');
-    link.href = video.thumbnail; // In a real app, this would be the video file
+    link.href = downloadUrl;
     link.download = `${video.title}.mp4`;
+    link.target = '_blank'; // Open in new tab for external URLs
     link.click();
   };
 
@@ -129,7 +82,6 @@ function App() {
         {/* Video Library */}
         <section>
           <VideoLibrary
-            videos={videos}
             onPlayVideo={handlePlayVideo}
             onDownloadVideo={handleDownloadVideo}
           />

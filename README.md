@@ -72,8 +72,8 @@ vid-toolkit/
    python main.py
    ```
 
-   The API will be available at `http://localhost:8000`
-   API documentation: `http://localhost:8000/docs`
+   The API will be available at `http://localhost:6800`
+   API documentation: `http://localhost:6800/docs`
 
 ## Usage
 
