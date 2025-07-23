@@ -5,7 +5,7 @@ import { X, Download, ExternalLink } from 'lucide-react';
 interface Video {
   id: string;
   title: string;
-  thumbnail: string;
+  thumbnail_url: string;
   duration: string;
   format: string;
   fileSize: string;
@@ -99,7 +99,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isOpen, onClose, onDow
               <video
                 ref={videoRef}
                 src={video.video_local_url ? `http://localhost:6800${video.video_local_url}` : video.url}
-                poster={video.thumbnail}
+                poster={video.thumbnail_url}
                 controls
                 className="w-full h-full"
                 preload="metadata"

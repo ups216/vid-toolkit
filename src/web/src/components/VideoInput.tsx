@@ -4,9 +4,10 @@ import { Download, Globe, ChevronDown } from 'lucide-react';
 interface VideoInputProps {
   onSubmit: (url: string, format: string) => void;
   isProcessing: boolean;
+  onVideoImported?: () => void;
 }
 
-const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing }) => {
+const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing, onVideoImported }) => {
   const [url, setUrl] = useState('');
   const [format, setFormat] = useState('');
   const [showFormats, setShowFormats] = useState(false);
@@ -14,6 +15,7 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing }) => {
   const [formats, setFormats] = useState<Array<{ value: string; label: string; size: string }>>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const validateUrl = (urlString: string) => {
     try {
@@ -147,10 +149,71 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing }) => {
     }
   }, [isValidUrl, url]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (url.trim() && isValidUrl) {
-      onSubmit(url.trim(), format);
+    if (url.trim() && isValidUrl && format) {
+      setIsImporting(true);
+      
+      try {
+        // Step 1: Download the video
+        const downloadResponse = await fetch('http://localhost:6800/videopage_download', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            url: url.trim(),
+            format_id: format
+          })
+        });
+        
+        if (!downloadResponse.ok) {
+          throw new Error(`Download failed: ${downloadResponse.statusText}`);
+        }
+        
+        const downloadData = await downloadResponse.json();
+        
+        // Step 2: Save the video to library
+        const saveResponse = await fetch('http://localhost:6800/videopage_save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            video_url: url.trim(),
+            video_file_name: downloadData.filename
+          })
+        });
+        
+        if (!saveResponse.ok) {
+          throw new Error(`Save failed: ${saveResponse.statusText}`);
+        }
+        
+        const saveData = await saveResponse.json();
+        
+        // Clear the form after successful import
+        setUrl('');
+        setFormat('');
+        setFormats([]);
+        setIsValidUrl(false);
+        setShowFormats(false);
+        setAnalyzeError(null);
+        
+        // Trigger video library refresh
+        if (onVideoImported) {
+          onVideoImported();
+        }
+        
+        // Call the original onSubmit callback with success
+        onSubmit(url.trim(), format);
+        
+      } catch (error) {
+        console.error('Import failed:', error);
+        // You might want to show an error message to the user here
+        alert(error instanceof Error ? error.message : 'Failed to import video');
+      } finally {
+        setIsImporting(false);
+      }
     }
   };
 
@@ -175,6 +238,7 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing }) => {
               onChange={handleUrlChange}
               placeholder="https://www.youtube.com/watch?v=..."
               className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              disabled={isImporting}
               required
             />
             {url && (
@@ -214,7 +278,8 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing }) => {
               <button
                 type="button"
                 onClick={() => setShowFormats(!showFormats)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white hover:bg-slate-700/70 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                disabled={isImporting}
+                className="w-full flex items-center justify-between px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white hover:bg-slate-700/70 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span>{formats.find(f => f.value === format)?.label || 'Select format'}</span>
                 <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${showFormats ? 'rotate-180' : ''}`} />
@@ -249,10 +314,10 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing }) => {
 
         <button
           type="submit"
-          disabled={isProcessing || !url.trim() || !isValidUrl || !format || isAnalyzing}
+          disabled={isProcessing || isImporting || !url.trim() || !isValidUrl || !format || isAnalyzing || formats.length === 0 || analyzeError !== null}
           className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-slate-600 disabled:to-slate-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
         >
-          {isProcessing ? (
+          {isProcessing || isImporting ? (
             <>
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
               <span>Processing...</span>

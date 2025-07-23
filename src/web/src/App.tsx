@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Header from './components/Header';
 import VideoInput from './components/VideoInput';
 import VideoLibrary from './components/VideoLibrary';
@@ -7,7 +7,7 @@ import VideoPlayer from './components/VideoPlayer';
 interface Video {
   id: string;
   title: string;
-  thumbnail: string;
+  thumbnail_url: string;
   duration: string;
   format: string;
   fileSize: string;
@@ -22,6 +22,7 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+  const videoLibraryRef = useRef<{ refreshVideos: () => void } | null>(null);
 
   const handleVideoSubmit = async (url: string, format: string) => {
     setIsProcessing(true);
@@ -31,6 +32,13 @@ function App() {
     await new Promise(resolve => setTimeout(resolve, 3000));
     
     setIsProcessing(false);
+  };
+
+  const handleVideoImported = () => {
+    // Trigger video library refresh
+    if (videoLibraryRef.current) {
+      videoLibraryRef.current.refreshVideos();
+    }
   };
 
   const handlePlayVideo = (video: Video) => {
@@ -75,13 +83,18 @@ function App() {
           </div>
           
           <div className="max-w-2xl mx-auto">
-            <VideoInput onSubmit={handleVideoSubmit} isProcessing={isProcessing} />
+            <VideoInput 
+              onSubmit={handleVideoSubmit} 
+              isProcessing={isProcessing} 
+              onVideoImported={handleVideoImported}
+            />
           </div>
         </section>
 
         {/* Video Library */}
         <section>
           <VideoLibrary
+            ref={videoLibraryRef}
             onPlayVideo={handlePlayVideo}
             onDownloadVideo={handleDownloadVideo}
           />

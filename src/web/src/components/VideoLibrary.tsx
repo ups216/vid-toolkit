@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Search, Play, Download, ExternalLink, FileVideo, Calendar, HardDrive, Grid3X3, List, Loader2 } from 'lucide-react';
 import VideoCard from './VideoCard';
 
@@ -34,7 +34,11 @@ interface VideoLibraryProps {
   onDownloadVideo: (video: Video) => void;
 }
 
-const VideoLibrary: React.FC<VideoLibraryProps> = ({ onPlayVideo, onDownloadVideo }) => {
+interface VideoLibraryRef {
+  refreshVideos: () => void;
+}
+
+const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVideo, onDownloadVideo }, ref) => {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +105,11 @@ const VideoLibrary: React.FC<VideoLibraryProps> = ({ onPlayVideo, onDownloadVide
       setLoading(false);
     }
   };
+
+  // Expose refresh function to parent component
+  useImperativeHandle(ref, () => ({
+    refreshVideos: fetchVideos
+  }));
 
   // Fetch videos on component mount
   useEffect(() => {
@@ -299,6 +308,8 @@ const VideoLibrary: React.FC<VideoLibraryProps> = ({ onPlayVideo, onDownloadVide
       )}
     </div>
   );
-};
+});
+
+VideoLibrary.displayName = 'VideoLibrary';
 
 export default VideoLibrary;
