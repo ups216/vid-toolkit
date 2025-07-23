@@ -11,8 +11,8 @@ const Header: React.FC = () => {
               <Video className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">VideoFlow</h1>
-              <p className="text-xs text-slate-400">Video Processing Made Simple</p>
+              <h1 className="text-xl font-bold text-white">VideoWallet</h1>
+              <p className="text-xs text-slate-400">Video Library Made Simple</p>
             </div>
           </div>
           <nav className="flex items-center space-x-6">
