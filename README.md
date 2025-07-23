@@ -1,6 +1,10 @@
 # Video Wallet
 
+English | [中文](./README_CN.md)
+
 Video Wallet is a modern web application for downloading and managing videos from various online platforms, built with React.js, Tailwind CSS, and FastAPI. Uses yt-dlp for video downloading capabilities.
+
+![](./assets/images/video-wallet-eng.png)
 
 ## Project Structure
 

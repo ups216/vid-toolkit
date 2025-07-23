@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Video, Download, Menu, X } from 'lucide-react';
+import { Video, Download, Menu, X, Github } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -36,6 +36,15 @@ const Header: React.FC = () => {
               </a>
               <a href="#" className="text-slate-300 hover:text-white transition-colors duration-200">
                 {t('header.nav.about')}
+              </a>
+              <a 
+                href="https://github.com/ups216/video-wallet" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-slate-300 hover:text-white transition-colors duration-200 p-2 hover:bg-slate-800/50 rounded-lg"
+                aria-label="GitHub Repository"
+              >
+                <Github className="h-5 w-5" />
               </a>
             </nav>
             <LanguageSwitcher />
@@ -78,6 +87,15 @@ const Header: React.FC = () => {
                  className="block px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-md transition-colors duration-200"
                >
                  {t('header.nav.about')}
+               </a>
+               <a 
+                 href="https://github.com/ups216/video-wallet" 
+                 target="_blank" 
+                 rel="noopener noreferrer"
+                 className="flex items-center space-x-2 px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-md transition-colors duration-200"
+               >
+                 <Github className="h-5 w-5" />
+                 <span>GitHub</span>
                </a>
               <div className="px-3 py-2">
                 <LanguageSwitcher />
