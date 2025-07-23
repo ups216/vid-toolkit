@@ -220,7 +220,7 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing, onVideo
   return (
     <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-8 shadow-2xl border border-slate-700/50">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-white mb-2">Download Any Video</h2>
+        <h2 className="text-3xl font-bold text-white mb-2">Paste and Collect</h2>
         <p className="text-slate-400">Paste a video URL and choose your preferred quality</p>
       </div>
 
