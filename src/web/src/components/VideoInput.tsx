@@ -260,7 +260,7 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing }) => {
           ) : (
             <>
               <Download className="h-5 w-5" />
-              <span>Download Video</span>
+              <span>Import Video</span>
             </>
           )}
         </button>

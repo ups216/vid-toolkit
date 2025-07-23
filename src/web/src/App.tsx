@@ -65,7 +65,7 @@ function App() {
         <section className="text-center">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 leading-tight">
-              Download Videos with
+              Private Video Library with
               <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent"> Ease</span>
             </h1>
             <p className="text-xl text-slate-400 mb-8">
