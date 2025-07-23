@@ -74,6 +74,8 @@ build/
 # Uploads and outputs (for development)
 src/server/uploads/
 src/server/outputs/
+src/server/video_library/
+src/server/download_tmp/
 
 # Temporary files
 *.tmp
