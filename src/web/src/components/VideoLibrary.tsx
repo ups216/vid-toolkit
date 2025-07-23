@@ -1,6 +1,7 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Search, Play, Download, ExternalLink, FileVideo, Calendar, HardDrive, Grid3X3, List, Loader2 } from 'lucide-react';
 import VideoCard from './VideoCard';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface Video {
   id: string;
@@ -44,6 +45,7 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [viewMode, setViewMode] = React.useState<'gallery' | 'list'>('gallery');
+  const { t } = useLanguage();
 
   // Helper function to format file size
   const formatFileSize = (bytes: number): string => {
@@ -126,8 +128,8 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
         <div className="flex items-center justify-center py-16">
           <div className="text-center">
             <Loader2 className="h-12 w-12 text-blue-500 animate-spin mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">Loading videos...</h3>
-            <p className="text-slate-400">Fetching your video library</p>
+            <h3 className="text-xl font-semibold text-white mb-2">{t('videoLibrary.loadingVideos')}</h3>
+            <p className="text-slate-400">{t('videoLibrary.fetchingLibrary')}</p>
           </div>
         </div>
       </div>
@@ -141,13 +143,13 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
           <div className="bg-red-500/10 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-4">
             <ExternalLink className="h-12 w-12 text-red-400" />
           </div>
-          <h3 className="text-xl font-semibold text-white mb-2">Failed to load videos</h3>
+          <h3 className="text-xl font-semibold text-white mb-2">{t('videoLibrary.failedToLoad')}</h3>
           <p className="text-slate-400 mb-4">{error}</p>
           <button
             onClick={fetchVideos}
             className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
           >
-            Try Again
+            {t('videoLibrary.tryAgain')}
           </button>
         </div>
       </div>
@@ -158,9 +160,9 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white mb-1">Video Library</h2>
+          <h2 className="text-2xl font-bold text-white mb-1">{t('videoLibrary.title')}</h2>
           <p className="text-slate-400">
-            {videos.length} video{videos.length !== 1 ? 's' : ''} in your collection
+            {videos.length} {videos.length === 1 ? t('videoLibrary.videosInCollection') : t('videoLibrary.videosInCollectionPlural')} {t('videoLibrary.inYourCollection')}
           </p>
         </div>
 
@@ -169,10 +171,10 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
             onClick={fetchVideos}
             disabled={loading}
             className="bg-slate-700/50 hover:bg-slate-600/50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-300 hover:text-white px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2"
-            title="Refresh library"
+            title={t('videoLibrary.refreshLibrary')}
           >
             <Loader2 className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            <span className="text-sm">Refresh</span>
+            <span className="text-sm">{t('videoLibrary.refresh')}</span>
           </button>
           
           <div className="flex bg-slate-800/50 rounded-lg p-1 border border-slate-600">
@@ -183,7 +185,7 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
                   ? 'bg-blue-500 text-white shadow-lg'
                   : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
               }`}
-              title="Gallery view"
+              title={t('videoLibrary.galleryView')}
             >
               <Grid3X3 className="h-4 w-4" />
             </button>
@@ -194,7 +196,7 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
                   ? 'bg-blue-500 text-white shadow-lg'
                   : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
               }`}
-              title="List view"
+              title={t('videoLibrary.listView')}
             >
               <List className="h-4 w-4" />
             </button>
@@ -204,7 +206,7 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search videos..."
+            placeholder={t('videoLibrary.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
@@ -219,12 +221,12 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
             <Search className="h-12 w-12 text-slate-500" />
           </div>
           <h3 className="text-xl font-semibold text-white mb-2">
-            {searchTerm ? 'No videos found' : 'No videos yet'}
+            {searchTerm ? t('videoLibrary.noVideosFound') : t('videoLibrary.noVideosYet')}
           </h3>
           <p className="text-slate-400">
             {searchTerm 
-              ? 'Try adjusting your search terms' 
-              : 'Download your first video to get started'
+              ? t('videoLibrary.adjustSearchTerms') 
+              : t('videoLibrary.downloadFirstVideo')
             }
           </p>
         </div>
@@ -281,21 +283,21 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
                     <button
                       onClick={() => onPlayVideo(video)}
                       className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors duration-200"
-                      title="Play video"
+                      title={t('videoLibrary.playVideo')}
                     >
                       <Play className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => onDownloadVideo(video)}
                       className="p-2 bg-slate-600/50 hover:bg-slate-600/70 text-slate-300 rounded-lg transition-colors duration-200"
-                      title="Download video"
+                      title={t('videoLibrary.downloadVideo')}
                     >
                       <Download className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => window.open(video.url, '_blank')}
                       className="p-2 bg-slate-600/50 hover:bg-slate-600/70 text-slate-300 rounded-lg transition-colors duration-200"
-                      title="View original"
+                      title={t('videoLibrary.viewOriginal')}
                     >
                       <ExternalLink className="h-4 w-4" />
                     </button>

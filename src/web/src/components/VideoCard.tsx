@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Play, Download, Calendar, Clock, FileVideo } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface Video {
   id: string;
@@ -22,6 +23,7 @@ interface VideoCardProps {
 
 const VideoCard: React.FC<VideoCardProps> = ({ video, onPlay, onDownload }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const { t } = useLanguage();
 
   return (
     <div
@@ -74,7 +76,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onPlay, onDownload }) => {
           className="w-full bg-gradient-to-r from-slate-700 to-slate-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
         >
           <Download className="h-4 w-4" />
-          <span>Download</span>
+          <span>{t('videoCard.download')}</span>
         </button>
       </div>
     </div>

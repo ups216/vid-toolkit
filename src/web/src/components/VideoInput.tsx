@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Globe, ChevronDown } from 'lucide-react';
+import { Globe, Download, ChevronDown } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface VideoInputProps {
   onSubmit: (url: string, format: string) => void;
@@ -8,6 +9,7 @@ interface VideoInputProps {
 }
 
 const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing, onVideoImported }) => {
+  const { t } = useLanguage();
   const [url, setUrl] = useState('');
   const [format, setFormat] = useState('');
   const [showFormats, setShowFormats] = useState(false);
@@ -220,14 +222,14 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing, onVideo
   return (
     <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-8 shadow-2xl border border-slate-700/50">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-white mb-2">Paste and Collect</h2>
-        <p className="text-slate-400">Paste a video URL and choose your preferred quality</p>
+        <h2 className="text-3xl font-bold text-white mb-2">{t('videoInput.title')}</h2>
+        <p className="text-slate-400">{t('videoInput.subtitle')}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="url" className="block text-sm font-medium text-slate-300 mb-2">
-            Video URL
+            {t('videoInput.urlLabel')}
           </label>
           <div className="relative">
             <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -236,7 +238,7 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing, onVideo
               id="url"
               value={url}
               onChange={handleUrlChange}
-              placeholder="https://www.youtube.com/watch?v=..."
+              placeholder={t('videoInput.urlPlaceholder')}
               className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               disabled={isImporting}
               required
@@ -253,7 +255,7 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing, onVideo
           </div>
           {url && !isValidUrl && (
             <p className="text-red-400 text-sm mt-2">
-              Please enter a valid video URL from supported platforms (YouTube, Vimeo, etc.)
+              {t('videoInput.invalidUrl')}
             </p>
           )}
         </div>
@@ -261,13 +263,13 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing, onVideo
         {isValidUrl && (
         <div className="animate-in slide-in-from-top-2 duration-300">
           <label className="block text-sm font-medium text-slate-300 mb-2">
-            Video Quality
+            {t('videoInput.qualityLabel')}
           </label>
           
           {isAnalyzing ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-              <span className="ml-2 text-slate-400">Analyzing video formats...</span>
+              <span className="ml-2 text-slate-400">{t('videoInput.analyzing')}</span>
             </div>
           ) : analyzeError ? (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
@@ -281,7 +283,7 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing, onVideo
                 disabled={isImporting}
                 className="w-full flex items-center justify-between px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white hover:bg-slate-700/70 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span>{formats.find(f => f.value === format)?.label || 'Select format'}</span>
+                <span>{formats.find(f => f.value === format)?.label || t('videoInput.selectFormat')}</span>
                 <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${showFormats ? 'rotate-180' : ''}`} />
               </button>
               
@@ -306,7 +308,7 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing, onVideo
             </div>
           ) : (
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
-              <p className="text-yellow-400 text-sm">No video formats available for this URL</p>
+              <p className="text-yellow-400 text-sm">{t('videoInput.noFormats')}</p>
             </div>
           )}
         </div>
@@ -320,12 +322,12 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing, onVideo
           {isProcessing || isImporting ? (
             <>
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              <span>Processing...</span>
+              <span>{t('videoInput.processing')}</span>
             </>
           ) : (
             <>
               <Download className="h-5 w-5" />
-              <span>Import Video</span>
+              <span>{t('videoInput.importVideo')}</span>
             </>
           )}
         </button>

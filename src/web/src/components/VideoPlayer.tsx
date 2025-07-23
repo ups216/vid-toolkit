@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Download, ExternalLink } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface Video {
   id: string;
@@ -27,6 +28,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isOpen, onClose, onDow
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { t } = useLanguage();
 
   // Reset video state when modal opens/closes
   useEffect(() => {
@@ -89,9 +91,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isOpen, onClose, onDow
               <div className="text-red-500 mb-4">
                 <X className="h-16 w-16" />
               </div>
-              <p className="text-lg mb-2">Failed to load video</p>
+              <p className="text-lg mb-2">{t('videoPlayer.failedToLoad')}</p>
               <p className="text-slate-400 text-sm text-center px-4">
-                The video format may not be supported or the file may be corrupted.
+                {t('videoPlayer.formatNotSupported')}
               </p>
             </div>
           ) : (
@@ -108,7 +110,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isOpen, onClose, onDow
                 onPlay={handlePlay}
                 onPause={handlePause}
               >
-                Your browser does not support the video tag.
+                {t('videoPlayer.browserNotSupported')}
               </video>
             </>
           )}
@@ -121,14 +123,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isOpen, onClose, onDow
               className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
             >
               <Download className="h-5 w-5" />
-              <span>Download Video</span>
+              <span>{t('videoPlayer.downloadVideo')}</span>
             </button>
             <button
               onClick={() => window.open(video.url, '_blank')}
               className="flex-1 sm:flex-none bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
             >
               <ExternalLink className="h-5 w-5" />
-              <span>View Original</span>
+              <span>{t('videoPlayer.viewOriginal')}</span>
             </button>
           </div>
         </div>

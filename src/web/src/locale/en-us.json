@@ -1,0 +1,64 @@
+{
+  "header": {
+    "title": "Video Wallet",
+    "subtitle": "Video Library Made Simple",
+    "nav": {
+      "home": "Home",
+      "library": "Library",
+      "about": "About"
+    }
+  },
+  "hero": {
+    "title": "Private Video Library with",
+    "titleHighlight": "Ease",
+    "subtitle": "Simply paste any video URL and download in your preferred quality. Fast, reliable, and completely free."
+  },
+  "footer": {
+    "copyright": "© 2025 VideoFlow. Built with React, Vite, and Tailwind CSS."
+  },
+  "videoCard": {
+    "download": "Download"
+  },
+  "videoLibrary": {
+    "title": "Video Library",
+    "videosInCollection": "video",
+    "videosInCollectionPlural": "videos",
+    "inYourCollection": "in your collection",
+    "refresh": "Refresh",
+    "refreshLibrary": "Refresh library",
+    "galleryView": "Gallery view",
+    "listView": "List view",
+    "searchPlaceholder": "Search videos...",
+    "loadingVideos": "Loading videos...",
+    "fetchingLibrary": "Fetching your video library",
+    "failedToLoad": "Failed to load videos",
+    "tryAgain": "Try Again",
+    "noVideosFound": "No videos found",
+    "noVideosYet": "No videos yet",
+    "adjustSearchTerms": "Try adjusting your search terms",
+    "downloadFirstVideo": "Download your first video to get started",
+    "playVideo": "Play video",
+    "downloadVideo": "Download video",
+    "viewOriginal": "View original"
+  },
+  "videoPlayer": {
+    "failedToLoad": "Failed to load video",
+    "formatNotSupported": "The video format may not be supported or the file may be corrupted.",
+    "browserNotSupported": "Your browser does not support the video tag.",
+    "downloadVideo": "Download Video",
+    "viewOriginal": "View Original"
+  },
+  "videoInput": {
+    "title": "Paste and Collect",
+    "subtitle": "Paste a video URL and choose your preferred quality",
+    "urlLabel": "Video URL",
+    "urlPlaceholder": "https://www.youtube.com/watch?v=...",
+    "invalidUrl": "Please enter a valid video URL from supported platforms (YouTube, Vimeo, etc.)",
+    "qualityLabel": "Video Quality",
+    "analyzing": "Analyzing video formats...",
+    "selectFormat": "Select format",
+    "noFormats": "No video formats available for this URL",
+    "processing": "Processing...",
+    "importVideo": "Import Video"
+  }
+}

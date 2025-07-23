@@ -3,6 +3,7 @@ import Header from './components/Header';
 import VideoInput from './components/VideoInput';
 import VideoLibrary from './components/VideoLibrary';
 import VideoPlayer from './components/VideoPlayer';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 
 interface Video {
   id: string;
@@ -17,8 +18,8 @@ interface Video {
   video_direct_url?: string;
 }
 
-function App() {
-
+function AppContent() {
+  const { t } = useLanguage();
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
@@ -73,12 +74,11 @@ function App() {
         <section className="text-center">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 leading-tight">
-              Private Video Library with
-              <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent"> Ease</span>
+              {t('hero.title')}
+              <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent"> {t('hero.titleHighlight')}</span>
             </h1>
             <p className="text-xl text-slate-400 mb-8">
-              Simply paste any video URL and download in your preferred quality. 
-              Fast, reliable, and completely free.
+              {t('hero.subtitle')}
             </p>
           </div>
           
@@ -114,12 +114,20 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
             <p className="text-slate-400">
-              © 2025 VideoFlow. Built with React, Vite, and Tailwind CSS.
+              {t('footer.copyright')}
             </p>
           </div>
         </div>
-      </footer>
+        </footer>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }
 
