@@ -1,0 +1,27 @@
+{
+  "name": "vid-toolkit",
+  "version": "1.0.0",
+  "description": "A modern web application for video processing built with React.js, Tailwind CSS, and FastAPI",
+  "scripts": {
+    "dev:web": "cd src/web && npm run dev",
+    "dev:server": "cd src/server && python main.py",
+    "build:web": "cd src/web && npm run build",
+    "install:web": "cd src/web && npm install",
+    "install:server": "cd src/server && pip install -r requirements.txt",
+    "setup": "npm run install:web && npm run install:server"
+  },
+  "keywords": [
+    "video",
+    "processing",
+    "react",
+    "tailwind",
+    "fastapi",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  }
+}
