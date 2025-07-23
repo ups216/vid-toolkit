@@ -75,158 +75,6 @@ VIDEO_LIBRARY_DATA_FILE = VIDEO_LIBRARY_DIR / "data.json"
 async def root():
     return {"message": "Video Toolkit API is running"}
 
-@app.post("/upload")
-async def upload_video(file: UploadFile = File(...)):
-    """Upload a video file"""
-    if not file.content_type.startswith("video/"):
-        raise HTTPException(status_code=400, detail="File must be a video")
-    
-    # Generate unique filename
-    file_id = str(uuid.uuid4())
-    file_extension = Path(file.filename).suffix
-    filename = f"{file_id}{file_extension}"
-    
-    # Resolve relative path if needed
-    uploads_dir = UPLOADS_DIR
-    if not uploads_dir.is_absolute():
-        uploads_dir = Path.cwd() / uploads_dir
-    
-    file_path = uploads_dir / filename
-    
-    # Save uploaded file
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    
-    return {
-        "file_id": file_id,
-        "filename": filename,
-        "original_name": file.filename,
-        "size": file_path.stat().st_size
-    }
-
-@app.post("/convert/{file_id}")
-async def convert_video(file_id: str, output_format: str = "mp4"):
-    """Convert video to different format"""
-    # Find the uploaded file
-    uploads_dir = UPLOADS_DIR
-    if not uploads_dir.is_absolute():
-        uploads_dir = Path.cwd() / uploads_dir
-    
-    input_files = list(uploads_dir.glob(f"{file_id}.*"))
-    if not input_files:
-        raise HTTPException(status_code=404, detail="File not found")
-    
-    input_file = input_files[0]
-    output_filename = f"{file_id}_converted.{output_format}"
-    
-    # Resolve relative path if needed
-    outputs_dir = OUTPUTS_DIR
-    if not outputs_dir.is_absolute():
-        outputs_dir = Path.cwd() / outputs_dir
-    
-    output_path = outputs_dir / output_filename
-    
-    # TODO: Implement actual video conversion using ffmpeg
-    # For now, just copy the file as a placeholder
-    shutil.copy2(input_file, output_path)
-    
-    return {
-        "message": "Video conversion completed",
-        "output_file": output_filename,
-        "download_url": f"/download/{output_filename}"
-    }
-
-@app.post("/extract-audio/{file_id}")
-async def extract_audio(file_id: str, output_format: str = "mp3"):
-    """Extract audio from video"""
-    uploads_dir = UPLOADS_DIR
-    if not uploads_dir.is_absolute():
-        uploads_dir = Path.cwd() / uploads_dir
-    
-    input_files = list(uploads_dir.glob(f"{file_id}.*"))
-    if not input_files:
-        raise HTTPException(status_code=404, detail="File not found")
-    
-    output_filename = f"{file_id}_audio.{output_format}"
-    
-    # Resolve relative path if needed
-    outputs_dir = OUTPUTS_DIR
-    if not outputs_dir.is_absolute():
-        outputs_dir = Path.cwd() / outputs_dir
-    
-    output_path = outputs_dir / output_filename
-    
-    # TODO: Implement actual audio extraction using ffmpeg
-    # For now, create a placeholder file
-    output_path.touch()
-    
-    return {
-        "message": "Audio extraction completed",
-        "output_file": output_filename,
-        "download_url": f"/download/{output_filename}"
-    }
-
-@app.post("/thumbnail/{file_id}")
-async def generate_thumbnail(file_id: str, timestamp: float = 1.0):
-    """Generate thumbnail from video"""
-    uploads_dir = UPLOADS_DIR
-    if not uploads_dir.is_absolute():
-        uploads_dir = Path.cwd() / uploads_dir
-    
-    input_files = list(uploads_dir.glob(f"{file_id}.*"))
-    if not input_files:
-        raise HTTPException(status_code=404, detail="File not found")
-    
-    output_filename = f"{file_id}_thumbnail.jpg"
-    
-    # Resolve relative path if needed
-    outputs_dir = OUTPUTS_DIR
-    if not outputs_dir.is_absolute():
-        outputs_dir = Path.cwd() / outputs_dir
-    
-    output_path = outputs_dir / output_filename
-    
-    # TODO: Implement actual thumbnail generation using ffmpeg
-    # For now, create a placeholder file
-    output_path.touch()
-    
-    return {
-        "message": "Thumbnail generation completed",
-        "output_file": output_filename,
-        "download_url": f"/download/{output_filename}"
-    }
-
-@app.post("/compress/{file_id}")
-async def compress_video(file_id: str, quality: str = "medium"):
-    """Compress video file"""
-    uploads_dir = UPLOADS_DIR
-    if not uploads_dir.is_absolute():
-        uploads_dir = Path.cwd() / uploads_dir
-    
-    input_files = list(uploads_dir.glob(f"{file_id}.*"))
-    if not input_files:
-        raise HTTPException(status_code=404, detail="File not found")
-    
-    input_file = input_files[0]
-    output_filename = f"{file_id}_compressed{input_file.suffix}"
-    
-    # Resolve relative path if needed
-    outputs_dir = OUTPUTS_DIR
-    if not outputs_dir.is_absolute():
-        outputs_dir = Path.cwd() / outputs_dir
-    
-    output_path = outputs_dir / output_filename
-    
-    # TODO: Implement actual video compression using ffmpeg
-    # For now, just copy the file as a placeholder
-    shutil.copy2(input_file, output_path)
-    
-    return {
-        "message": "Video compression completed",
-        "output_file": output_filename,
-        "download_url": f"/download/{output_filename}"
-    }
-
 @app.post("/videopage_analyze")
 async def analyze_video_page(request: VideoPageRequest):
     """Analyze a webpage URL to extract downloadable video information using yt-dlp"""
@@ -336,12 +184,15 @@ async def download_video_from_page(request: VideoDownloadRequest):
         if not download_tmp_dir.is_absolute():
             download_tmp_dir = Path.cwd() / download_tmp_dir
         
-        # Run yt-dlp to download the specific format and thumbnail
+        # Run yt-dlp to download the specific format with audio and thumbnail
+        # Use format selection that ensures both video and audio are included
+        # If the requested format is video-only, merge it with best audio
         cmd = [
             "yt-dlp",
-            "--format", request.format_id,
+            "--format", f"{request.format_id}+bestaudio/best[height<=?1080]",
             "--output", str(download_tmp_dir / f"{download_id}_%(id)s.%(ext)s"),
             "--write-thumbnail",
+            "--merge-output-format", "mp4",
             "--cookies", "/home/azureuser/source/cookies.txt",
             request.url
         ]
