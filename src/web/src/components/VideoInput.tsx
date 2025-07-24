@@ -21,13 +21,9 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing, onVideo
 
   const validateUrl = (urlString: string) => {
     try {
-      const url = new URL(urlString);
-      // Check for common video platforms
-      const validDomains = [
-        'youtube.com', 'youtu.be', 'vimeo.com', 'dailymotion.com',
-        'twitch.tv', 'facebook.com', 'instagram.com', 'tiktok.com'
-      ];
-      return validDomains.some(domain => url.hostname.includes(domain));
+      // Only check if the string is a valid URL
+      new URL(urlString);
+      return true;
     } catch {
       return false;
     }
@@ -151,6 +147,20 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing, onVideo
     }
   }, [isValidUrl, url]);
 
+  const hintPlaceholders = [
+    'e.g. https://youtube.com/...',
+    'e.g. https://bilibili.com/...',
+    'e.g. https://x.com/...',
+  ];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % hintPlaceholders.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (url.trim() && isValidUrl && format) {
@@ -238,7 +248,7 @@ const VideoInput: React.FC<VideoInputProps> = ({ onSubmit, isProcessing, onVideo
               id="url"
               value={url}
               onChange={handleUrlChange}
-              placeholder={t('videoInput.urlPlaceholder')}
+              placeholder={hintPlaceholders[placeholderIndex]}
               className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               disabled={isImporting}
               required

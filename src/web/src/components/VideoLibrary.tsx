@@ -45,6 +45,7 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [viewMode, setViewMode] = React.useState<'gallery' | 'list'>('gallery');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const { t } = useLanguage();
 
   // Helper function to format file size
@@ -122,6 +123,13 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
     video.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Sort filtered videos by date
+  const sortedVideos = [...filteredVideos].sort((a, b) => {
+    const dateA = new Date(a.downloadedAt).getTime();
+    const dateB = new Date(b.downloadedAt).getTime();
+    return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+  });
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -176,6 +184,18 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
             <Loader2 className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             <span className="text-sm">{t('videoLibrary.refresh')}</span>
           </button>
+          {/* Sort Order Dropdown */}
+          <div className="relative">
+            <select
+              value={sortOrder}
+              onChange={e => setSortOrder(e.target.value as 'newest' | 'oldest')}
+              className="bg-slate-800/50 border border-slate-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              title="Sort by date"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
+          </div>
           
           <div className="flex bg-slate-800/50 rounded-lg p-1 border border-slate-600">
             <button
@@ -234,7 +254,7 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
         <>
           {viewMode === 'gallery' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredVideos.map((video) => (
+              {sortedVideos.map((video) => (
                 <VideoCard
                   key={video.id}
                   video={video}
@@ -245,7 +265,7 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
             </div>
           ) : (
             <div className="bg-slate-800/30 rounded-xl border border-slate-700/50 overflow-hidden">
-              {filteredVideos.map((video) => (
+              {sortedVideos.map((video) => (
                 <div
                   key={video.id}
                   className="flex items-center p-4 hover:bg-slate-700/30 transition-colors duration-200 border-b border-slate-700/30 last:border-b-0"
