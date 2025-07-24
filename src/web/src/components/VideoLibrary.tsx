@@ -1,5 +1,5 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { Search, Play, Download, ExternalLink, FileVideo, Calendar, HardDrive, Grid3X3, List, Loader2 } from 'lucide-react';
+import { Search, Play, Download, ExternalLink, Calendar, HardDrive, Grid3X3, List, Loader2 } from 'lucide-react';
 import VideoCard from './VideoCard';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -14,6 +14,46 @@ interface Video {
   url: string;
   video_local_url?: string;
   video_direct_url?: string;
+  video_url?: string;
+}
+
+interface ApiVideo {
+  id: string;
+  video_url: string;
+  video_page_name: string;
+  original_file_name: string;
+  library_file_name: string;
+  file_path: string;
+  file_size: number;
+  saved_at: string;
+  video_local_url?: string;
+  video_direct_url?: string;
+  thumbnail_url?: string;
+}
+
+function getVideoSource(url: string): string {
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    return 'YouTube';
+  } else if (url.includes('bilibili.com')) {
+    return 'Bilibili';
+  } else if (url.includes('x.com') || url.includes('twitter.com')) {
+    return 'X';
+  }
+  return 'Unknown';
+}
+
+interface Video {
+  id: string;
+  title: string;
+  thumbnail_url: string;
+  duration: string;
+  format: string;
+  fileSize: string;
+  downloadedAt: string;
+  url: string;
+  video_local_url?: string;
+  video_direct_url?: string;
+  video_url?: string;
 }
 
 interface ApiVideo {
@@ -84,7 +124,8 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
       downloadedAt: formatDate(apiVideo.saved_at),
       url: apiVideo.video_url,
       video_local_url: apiVideo.video_local_url,
-      video_direct_url: apiVideo.video_direct_url
+      video_direct_url: apiVideo.video_direct_url,
+      video_url: apiVideo.video_url
     };
   };
 
@@ -270,9 +311,21 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
                   key={video.id}
                   className="flex items-center p-4 hover:bg-slate-700/30 transition-colors duration-200 border-b border-slate-700/30 last:border-b-0"
                 >
-                  {/* Video Icon */}
-                  <div className="flex-shrink-0 w-12 h-12 bg-slate-700/50 rounded-lg flex items-center justify-center mr-4">
-                    <FileVideo className="h-6 w-6 text-blue-400" />
+                  {/* Video Thumbnail */}
+                  <div className="flex-shrink-0 w-12 h-12 bg-slate-700/50 rounded-lg overflow-hidden mr-4">
+                    <img
+                      src={video.thumbnail_url}
+                      alt={video.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="h-6 w-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></div>';
+                        }
+                      }}
+                    />
                   </div>
 
                   {/* Video Info */}
@@ -281,6 +334,13 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
                       {video.title}
                     </h3>
                     <div className="flex items-center space-x-4 text-xs text-slate-400">
+                      {video.video_url && (
+                        <div className="flex items-center space-x-1">
+                          <span className="bg-indigo-500/90 text-white text-xs px-1.5 py-0.5 rounded">
+                            {getVideoSource(video.video_url)}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-center space-x-1">
                         <span className="bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full">
                           {video.format}
