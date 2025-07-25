@@ -71,6 +71,9 @@ VIDEO_LIBRARY_DIR.mkdir(parents=True, exist_ok=True)
 
 VIDEO_LIBRARY_DATA_FILE = VIDEO_LIBRARY_DIR / "data.json"
 
+# Cookies file path
+COOKIES_FILE = Path("cookies.txt")
+
 @app.get("/")
 async def root():
     return {"message": "Video Toolkit API is running"}
@@ -84,6 +87,7 @@ async def analyze_video_page(request: VideoPageRequest):
             "yt-dlp",
             "--dump-json",
             "--no-download",
+            # "--cookies", str(COOKIES_FILE),
             request.url
         ]
         
@@ -195,6 +199,7 @@ async def download_video_from_page(request: VideoDownloadRequest):
             "--merge-output-format", "mp4",
             "--embed-metadata",
             "--keep-video",  # Keep video file temporarily for debugging
+            # "--cookies", str(COOKIES_FILE),
             request.url
         ]
         

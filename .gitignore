@@ -77,6 +77,9 @@ src/server/outputs/
 src/server/video_library/
 src/server/download_tmp/
 
+# cookie file
+src/server/cookies.txt
+
 # Temporary files
 *.tmp
 *.temp
