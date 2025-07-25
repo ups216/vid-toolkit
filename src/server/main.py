@@ -84,7 +84,6 @@ async def analyze_video_page(request: VideoPageRequest):
             "yt-dlp",
             "--dump-json",
             "--no-download",
-            "--cookies", "/home/azureuser/source/cookies.txt",
             request.url
         ]
         
@@ -186,14 +185,16 @@ async def download_video_from_page(request: VideoDownloadRequest):
         
         # Run yt-dlp to download the specific format with audio and thumbnail
         # Use format selection that ensures both video and audio are included
-        # If the requested format is video-only, merge it with best audio
+        # For Bilibili and other sites with separate video/audio streams
+        # Use safe filename without video title to avoid character issues
         cmd = [
             "yt-dlp",
-            "--format", f"{request.format_id}+bestaudio/best[height<=?1080]",
-            "--output", str(download_tmp_dir / f"{download_id}_%(id)s.%(ext)s"),
+            "--format", f"{request.format_id}+bestaudio/best",
+            "--output", str(download_tmp_dir / f"{download_id}.%(ext)s"),
             "--write-thumbnail",
             "--merge-output-format", "mp4",
-            "--cookies", "/home/azureuser/source/cookies.txt",
+            "--embed-metadata",
+            "--keep-video",  # Keep video file temporarily for debugging
             request.url
         ]
         
@@ -205,22 +206,87 @@ async def download_video_from_page(request: VideoDownloadRequest):
         )
         
         if result.returncode != 0:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Failed to download video: {result.stderr}"
+            # Try alternative format selection if the first attempt fails
+            print(f"First download attempt failed: {result.stderr}")
+            
+            # Fallback: Try with a simpler format selection but still ensure merging
+            cmd_fallback = [
+                "yt-dlp",
+                "--format", f"{request.format_id}+bestaudio",
+                "--output", str(download_tmp_dir / f"{download_id}.%(ext)s"),
+                "--write-thumbnail",
+                "--merge-output-format", "mp4",
+                "--embed-metadata",
+                request.url
+            ]
+            
+            result = subprocess.run(
+                cmd_fallback,
+                capture_output=True,
+                text=True,
+                timeout=300
             )
+            
+            if result.returncode != 0:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Failed to download video with both attempts. Error: {result.stderr}"
+                )
         
-        # Find the downloaded video file
-        downloaded_files = list(download_tmp_dir.glob(f"{download_id}_*"))
-        video_files = [f for f in downloaded_files if not f.name.endswith(('.jpg', '.jpeg', '.png', '.webp'))]
+        # Find the downloaded files
+        downloaded_files = list(download_tmp_dir.glob(f"{download_id}*"))
+        video_files = [f for f in downloaded_files if f.suffix.lower() in ['.mp4', '.mkv', '.webm', '.avi']]
+        audio_files = [f for f in downloaded_files if f.suffix.lower() in ['.m4a', '.aac', '.mp3']]
         
-        if not video_files:
-            raise HTTPException(
-                status_code=500, 
-                detail="Download completed but video file not found"
+        # Check if we have separate video and audio files that need merging
+        if len(video_files) == 1 and len(audio_files) == 1:
+            video_file = video_files[0]
+            audio_file = audio_files[0]
+            
+            # Create merged filename using download_id only
+            merged_filename = f"{download_id}.mp4"
+            merged_path = download_tmp_dir / merged_filename
+            
+            # Use ffmpeg to merge video and audio
+            merge_cmd = [
+                "ffmpeg",
+                "-i", str(video_file),
+                "-i", str(audio_file),
+                "-c:v", "copy",
+                "-c:a", "aac",
+                "-y",  # Overwrite output file
+                str(merged_path)
+            ]
+            
+            merge_result = subprocess.run(
+                merge_cmd,
+                capture_output=True,
+                text=True,
+                timeout=120
             )
+            
+            if merge_result.returncode == 0:
+                # Remove separate files and use merged file
+                video_file.unlink()
+                audio_file.unlink()
+                downloaded_file = merged_path
+            else:
+                # If merging fails, use the video file (might be audio-less)
+                downloaded_file = video_file
+                print(f"FFmpeg merge failed: {merge_result.stderr}")
         
-        downloaded_file = video_files[0]
+        elif len(video_files) == 1:
+            # Single video file (hopefully with audio already merged)
+            downloaded_file = video_files[0]
+        else:
+            # Look for any non-image file
+            non_image_files = [f for f in downloaded_files if not f.name.endswith(('.jpg', '.jpeg', '.png', '.webp'))]
+            if not non_image_files:
+                raise HTTPException(
+                    status_code=500, 
+                    detail="Download completed but video file not found"
+                )
+            downloaded_file = non_image_files[0]
         
         # Find the downloaded thumbnail file
         thumbnail_files = [f for f in downloaded_files if f.name.endswith(('.jpg', '.jpeg', '.png', '.webp'))]
@@ -233,7 +299,8 @@ async def download_video_from_page(request: VideoDownloadRequest):
             "file_path": str(downloaded_file),
             "file_size": downloaded_file.stat().st_size,
             "url": request.url,
-            "format_id": request.format_id
+            "format_id": request.format_id,
+            "merged": len(video_files) == 1 and len(audio_files) == 1 and downloaded_file.name.endswith('.mp4')
         }
         
         # Add thumbnail information if available
@@ -264,11 +331,68 @@ async def save_video_to_library(request: VideoSaveRequest):
         
         # Check if the source file exists in download_tmp
         source_file = download_tmp_dir / request.video_file_name
+        
+        # If the requested file doesn't exist, try to find a merged version
+        if not source_file.exists():
+            # Extract download_id from filename if possible
+            filename_parts = request.video_file_name.split('_', 1)
+            if len(filename_parts) >= 1:
+                potential_download_id = filename_parts[0]
+                # Look for merged file with same download_id
+                merged_file = download_tmp_dir / f"{potential_download_id}.mp4"
+                if merged_file.exists():
+                    source_file = merged_file
+                    print(f"Using merged file: {merged_file}")
+        
         if not source_file.exists():
             raise HTTPException(
                 status_code=404, 
                 detail=f"Downloaded file '{request.video_file_name}' not found in download_tmp"
             )
+        
+        # Always prioritize merged .mp4 files over separate audio/video files
+        original_source_file = source_file
+        source_file_stem = source_file.stem
+        
+        # Extract the base name (remove format suffixes like .f100046 or .f30280)
+        if '.f' in source_file_stem:
+            base_stem = source_file_stem.split('.f')[0]
+        else:
+            # Handle cases where the file might not have format suffix
+            base_stem = source_file_stem
+        
+        # Look for merged .mp4 file with the same base name
+        potential_merged_files = list(download_tmp_dir.glob(f"{base_stem}*.mp4"))
+        
+        # Filter to find the best merged file (largest .mp4 file without format suffix)
+        best_merged_file = None
+        largest_size = 0
+        
+        for potential_file in potential_merged_files:
+            # Skip files with format suffixes (like .f100046.mp4) - look for clean merged files
+            potential_stem = potential_file.stem
+            if '.f' in potential_stem and any(char.isdigit() for char in potential_stem.split('.f')[-1]):
+                continue
+            
+            file_size = potential_file.stat().st_size
+            if file_size > largest_size:
+                largest_size = file_size
+                best_merged_file = potential_file
+        
+        # If user selected an audio file (.m4a), force them to use the merged .mp4 version
+        if source_file.suffix.lower() == '.m4a':
+            if best_merged_file:
+                print(f"Audio file detected. Using merged file: {best_merged_file.name} ({best_merged_file.stat().st_size} bytes) instead of {source_file.name} ({source_file.stat().st_size} bytes)")
+                source_file = best_merged_file
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Audio file selected but no merged .mp4 file found. Please ensure the video has been properly downloaded and merged first."
+                )
+        # For video files, use merged version if it's significantly larger (indicating it has audio)
+        elif best_merged_file and best_merged_file.stat().st_size > source_file.stat().st_size * 1.1:  # At least 10% larger
+            print(f"Using larger merged file: {best_merged_file.name} ({best_merged_file.stat().st_size} bytes) instead of {source_file.name} ({source_file.stat().st_size} bytes)")
+            source_file = best_merged_file
         
         # Extract video title if not provided
         video_page_name = request.video_page_name
@@ -279,7 +403,6 @@ async def save_video_to_library(request: VideoSaveRequest):
                     "yt-dlp",
                     "--dump-json",
                     "--no-download",
-                    "--cookies", "/home/azureuser/source/cookies.txt",
                     request.video_url
                 ]
                 
@@ -320,12 +443,12 @@ async def save_video_to_library(request: VideoSaveRequest):
             except Exception:
                 video_page_name = "Unknown Video"
         
-        # Generate a clean filename for the library
+        # Generate video ID first
+        video_id = str(uuid.uuid4())
+        
+        # Generate a safe filename for the library using only video ID
         file_extension = source_file.suffix
-        clean_name = "".join(c for c in video_page_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
-        clean_name = clean_name.replace(' ', '_')
-        unique_id = str(uuid.uuid4())[:8]
-        library_filename = f"{clean_name}_{unique_id}{file_extension}"
+        library_filename = f"{video_id}{file_extension}"
         
         # Move video file to video library
         destination_file = video_library_dir / library_filename
@@ -336,11 +459,11 @@ async def save_video_to_library(request: VideoSaveRequest):
         thumbnail_filename = None
         source_file_stem = source_file.stem  # filename without extension
         
-        # Search for thumbnail files with the same base name
+        # Search for thumbnail files with the same base name (using download_id pattern)
         for thumb_ext in ['.jpg', '.jpeg', '.png', '.webp']:
             potential_thumb = download_tmp_dir / f"{source_file_stem}{thumb_ext}"
             if potential_thumb.exists():
-                thumbnail_filename = f"{clean_name}_{unique_id}{thumb_ext}"
+                thumbnail_filename = f"{video_id}{thumb_ext}"
                 thumbnail_destination = video_library_dir / thumbnail_filename
                 potential_thumb.rename(thumbnail_destination)
                 break
@@ -354,9 +477,6 @@ async def save_video_to_library(request: VideoSaveRequest):
         if video_library_data_file.exists():
             with open(video_library_data_file, 'r', encoding='utf-8') as f:
                 video_data = json.load(f)
-        
-        # Generate video ID
-        video_id = str(uuid.uuid4())
         
         # Add new video entry (store relative paths for portability)
         new_entry = {
