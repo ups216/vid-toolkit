@@ -15,6 +15,20 @@ interface Video {
   video_local_url?: string;
   video_direct_url?: string;
   video_url?: string;
+  // Enhanced metadata
+  description?: string;
+  category?: string;
+  selected_tags?: string[];
+  uploader?: string;
+  view_count?: number;
+  like_count?: number;
+  dislike_count?: number;
+  comment_count?: number;
+  average_rating?: number;
+  channel_id?: string;
+  channel_url?: string;
+  upload_date?: string;
+  age_limit?: number;
 }
 
 interface ApiVideo {
@@ -29,6 +43,21 @@ interface ApiVideo {
   video_local_url?: string;
   video_direct_url?: string;
   thumbnail_url?: string;
+  // Enhanced metadata from backend
+  description?: string;
+  category?: string;
+  selected_tags?: string[];
+  uploader?: string;
+  view_count?: number;
+  like_count?: number;
+  dislike_count?: number;
+  comment_count?: number;
+  average_rating?: number;
+  channel_id?: string;
+  channel_url?: string;
+  upload_date?: string;
+  duration?: number;
+  age_limit?: number;
 }
 
 function getVideoSource(url: string): string {
@@ -42,32 +71,11 @@ function getVideoSource(url: string): string {
   return 'Unknown';
 }
 
-interface Video {
-  id: string;
-  title: string;
-  thumbnail_url: string;
-  duration: string;
-  format: string;
-  fileSize: string;
-  downloadedAt: string;
-  url: string;
-  video_local_url?: string;
-  video_direct_url?: string;
-  video_url?: string;
-}
-
-interface ApiVideo {
-  id: string;
-  video_url: string;
-  video_page_name: string;
-  original_file_name: string;
-  library_file_name: string;
-  file_path: string;
-  file_size: number;
-  saved_at: string;
-  video_local_url?: string;
-  video_direct_url?: string;
-  thumbnail_url?: string;
+function formatDuration(seconds?: number): string {
+  if (!seconds) return 'N/A';
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
 interface VideoLibraryProps {
@@ -118,14 +126,28 @@ const VideoLibrary = forwardRef<VideoLibraryRef, VideoLibraryProps>(({ onPlayVid
       id: apiVideo.id,
       title: apiVideo.video_page_name,
       thumbnail_url: `http://localhost:6800${apiVideo.thumbnail_url}`,
-      duration: 'N/A', // Duration not available in API response
+      duration: apiVideo.duration ? formatDuration(apiVideo.duration) : 'N/A',
       format: getFileExtension(apiVideo.library_file_name),
       fileSize: formatFileSize(apiVideo.file_size),
       downloadedAt: formatDate(apiVideo.saved_at),
       url: apiVideo.video_url,
       video_local_url: apiVideo.video_local_url,
       video_direct_url: apiVideo.video_direct_url,
-      video_url: apiVideo.video_url
+      video_url: apiVideo.video_url,
+      // Enhanced metadata
+      description: apiVideo.description,
+      category: apiVideo.category,
+      selected_tags: apiVideo.selected_tags,
+      uploader: apiVideo.uploader,
+      view_count: apiVideo.view_count,
+      like_count: apiVideo.like_count,
+      dislike_count: apiVideo.dislike_count,
+      comment_count: apiVideo.comment_count,
+      average_rating: apiVideo.average_rating,
+      channel_id: apiVideo.channel_id,
+      channel_url: apiVideo.channel_url,
+      upload_date: apiVideo.upload_date,
+      age_limit: apiVideo.age_limit
     };
   };
 
