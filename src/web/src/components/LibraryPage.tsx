@@ -281,14 +281,17 @@ const LibraryPage: React.FC = () => {
     
     try {
       // Delete videos one by one
-      for (const videoId of videosToDelete) {
-        const response = await fetch(`http://localhost:6800/api/videos/${videoId}`, {
-          method: 'DELETE',
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to delete video ${videoId}`);
-        }
+      // Send a single POST request to the backend delete endpoint
+      const response = await fetch('http://localhost:6800/videopage_delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ids: videosToDelete }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete selected videos');
       }
       
       // Refresh the video list
