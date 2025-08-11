@@ -273,4 +273,7 @@ def demonstrate_workflow():
         print(f"  {i}. {tip}")
 
 if __name__ == "__main__":
-    demonstrate_workflow()
+    try:
+        demonstrate_workflow()
+    except Exception as e:
+        print(f"❌ An error occurred during workflow demonstration: {e}")
