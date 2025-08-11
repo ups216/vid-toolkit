@@ -205,7 +205,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
                 className="flex items-center space-x-1 bg-slate-700/50 text-slate-300 text-xs px-2 py-1 rounded-full border border-slate-600/30"
               >
                 <Tag className="h-2 w-2" />
-                <span className="truncate max-w-16">{tag}</span>
+                <span className="truncate max-w-24">{tag}</span>
               </div>
             ))}
             {video.selected_tags.length > 3 && (
