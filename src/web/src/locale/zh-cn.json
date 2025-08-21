@@ -81,5 +81,12 @@
       "point2": "定期更新 Cookie 可以避免下载失败",
       "point3": "Cookie 数据仅存储在本地服务器中"
     }
+  },
+  "download": {
+    "analyzing": "正在分析视频...",
+    "downloading": "正在下载视频...",
+    "saving": "正在保存视频...",
+    "completed": "下载完成！",
+    "failed": "下载失败，请重试"
   }
 }

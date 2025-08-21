@@ -4,10 +4,101 @@ import { useLanguage } from '../contexts/LanguageContext';
 const ConfigPage: React.FC = () => {
   const { t } = useLanguage();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [cookieText, setCookieText] = useState('');
   const [updateStatus, setUpdateStatus] = useState<{
     type: 'success' | 'error' | null;
     message: string;
   }>({ type: null, message: '' });
+
+  const handleUpdateCookieFromText = async () => {
+    if (!cookieText.trim()) {
+      setUpdateStatus({
+        type: 'error',
+        message: '请先粘贴 Cookie 内容'
+      });
+      return;
+    }
+
+    setIsUpdating(true);
+    setUpdateStatus({ type: null, message: '' });
+
+    try {
+      // Parse cookies from text (browser format: name=value; name2=value2; ...)
+      const cookies = parseCookiesFromText(cookieText);
+      
+      console.log('Parsed cookies:', cookies.length, cookies);
+      
+      if (cookies.length === 0) {
+        setUpdateStatus({
+          type: 'error',
+          message: '无法解析 Cookie 内容，请检查格式是否正确'
+        });
+        return;
+      }
+
+      // Send cookies to server
+      const response = await fetch('http://localhost:6800/cookie', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cookies: cookies,
+          domain: '.youtube.com',
+          format: 'netscape'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      setUpdateStatus({
+        type: 'success',
+        message: `成功更新 ${result.cookies_count} 个 Cookie`
+      });
+
+    } catch (error) {
+      console.error('Error updating cookies:', error);
+      setUpdateStatus({
+        type: 'error',
+        message: 'Cookie 更新失败，请重试'
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const parseCookiesFromText = (text: string) => {
+    const cookies: any[] = [];
+    
+    // Split by semicolon and parse each cookie
+    const cookiePairs = text.split(';');
+    
+    for (const pair of cookiePairs) {
+      const trimmedPair = pair.trim();
+      if (!trimmedPair) continue;
+      
+      const [name, ...valueParts] = trimmedPair.split('=');
+      if (!name || valueParts.length === 0) continue;
+      
+      const value = valueParts.join('='); // In case value contains '='
+      
+      cookies.push({
+        name: name.trim(),
+        value: value.trim(),
+        domain: '.youtube.com',
+        path: '/',
+        secure: 'TRUE',
+        httpOnly: 'FALSE',
+        expirationDate: String(Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60))
+      });
+    }
+    
+    return cookies;
+  };
 
   const handleUpdateCookie = async () => {
     setIsUpdating(true);
@@ -22,7 +113,7 @@ const ConfigPage: React.FC = () => {
       if (cookies.length === 0) {
         setUpdateStatus({
           type: 'error',
-          message: t('config.cookie.noCookies', '未找到可用的Cookie。如果您需要下载需要登录的视频，请先访问对应网站并登录。')
+          message: '未找到可用的Cookie。如果您需要下载需要登录的视频，请先访问对应网站并登录。'
         });
         return;
       }
@@ -61,14 +152,14 @@ const ConfigPage: React.FC = () => {
       
       setUpdateStatus({
         type: 'success',
-        message: t('config.cookie.updateSuccess', `成功更新 ${result.cookies_count} 个Cookie`)
+        message: `成功更新 ${result.cookies_count} 个Cookie`
       });
 
     } catch (error) {
       console.error('Error updating cookies:', error);
       setUpdateStatus({
         type: 'error',
-        message: t('config.cookie.updateError', 'Cookie更新失败，请重试')
+        message: 'Cookie更新失败，请重试'
       });
     } finally {
       setIsUpdating(false);
@@ -167,24 +258,57 @@ const ConfigPage: React.FC = () => {
             </h2>
             
             <p className="text-slate-300 mb-8">
-              {t('config.cookie.description', '更新浏览器 Cookie 以提升视频下载成功率')}
+              更新浏览器 Cookie 以提升视频下载成功率
             </p>
 
-            {/* Update Cookie Button */}
-            <button
-              className={`font-semibold py-3 px-8 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg ${
-                isUpdating 
-                  ? 'bg-gray-500 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-700'
-              } text-white`}
-              onClick={handleUpdateCookie}
-              disabled={isUpdating}
-            >
-              {isUpdating 
-                ? t('config.cookie.updating', '更新中...') 
-                : t('config.cookie.updateButton', 'Update Cookie')
-              }
-            </button>
+            {/* Cookie Text Input */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                粘贴 Cookie 内容 (从浏览器复制)
+              </label>
+              <textarea
+                className="w-full h-32 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                placeholder="粘贴从浏览器复制的 Cookie 内容，格式如：name1=value1; name2=value2; ..."
+                value={cookieText}
+                onChange={(e) => setCookieText(e.target.value)}
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                从浏览器开发者工具中复制 Cookie 字符串，或从浏览器地址栏复制完整的 Cookie 内容
+              </p>
+            </div>
+
+            {/* Update Cookie Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                className={`font-semibold py-3 px-8 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg ${
+                  isUpdating 
+                    ? 'bg-gray-500 cursor-not-allowed' 
+                    : 'bg-green-600 hover:bg-green-700'
+                } text-white`}
+                onClick={handleUpdateCookieFromText}
+                disabled={isUpdating || !cookieText.trim()}
+              >
+                {isUpdating 
+                  ? '更新中...' 
+                  : '使用粘贴的 Cookie 更新'
+                }
+              </button>
+              
+              <button
+                className={`font-semibold py-3 px-8 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg ${
+                  isUpdating 
+                    ? 'bg-gray-500 cursor-not-allowed' 
+                    : 'bg-blue-600 hover:bg-blue-700'
+                } text-white`}
+                onClick={handleUpdateCookie}
+                disabled={isUpdating}
+              >
+                {isUpdating 
+                  ? '更新中...' 
+                  : '从浏览器自动获取'
+                }
+              </button>
+            </div>
 
             {/* Status Message */}
             {updateStatus.type && (
@@ -198,7 +322,7 @@ const ConfigPage: React.FC = () => {
             )}
 
             <div className="mt-6 text-sm text-slate-400">
-              {t('config.cookie.note', '点击按钮将从当前浏览器获取 Cookie 并更新到服务器')}
+              点击按钮将更新服务器的 Cookie 文件
             </div>
           </div>
         </div>
@@ -206,12 +330,13 @@ const ConfigPage: React.FC = () => {
         {/* Additional Info Section */}
         <div className="mt-8 bg-slate-800/30 backdrop-blur-sm border border-slate-700/30 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-blue-400 mb-3">
-            {t('config.info.title', '关于 Cookie 配置')}
+            关于 Cookie 配置
           </h3>
           <ul className="text-slate-300 space-y-2">
-            <li>• {t('config.info.point1', 'Cookie 用于访问需要登录的视频内容')}</li>
-            <li>• {t('config.info.point2', '定期更新 Cookie 可以避免下载失败')}</li>
-            <li>• {t('config.info.point3', 'Cookie 数据仅存储在本地服务器中')}</li>
+            <li>• Cookie 用于访问需要登录的视频内容</li>
+            <li>• 定期更新 Cookie 可以避免下载失败</li>
+            <li>• Cookie 数据仅存储在本地服务器中</li>
+            <li>• 推荐使用"粘贴 Cookie"方式，从浏览器复制完整的 Cookie 字符串</li>
           </ul>
         </div>
       </section>

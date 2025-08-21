@@ -38,25 +38,105 @@ interface Video {
 function AppContent() {
   const { t } = useLanguage();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<number>(0);
+  const [downloadStatus, setDownloadStatus] = useState<string>('');
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState<'home' | 'library'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'library' | 'config'>('home');
   const videoLibraryRef = useRef<{ refreshVideos: () => void } | null>(null);
+  const recentVideosRef = useRef<{ refreshVideos: () => void } | null>(null);
 
-  const handleVideoSubmit = async (_url: string, _format: string) => {
+  const handleVideoSubmit = async (url: string, format: string) => {
     setIsProcessing(true);
+    setDownloadProgress(0);
+    setDownloadStatus(t('download.analyzing'));
     
-    // TODO: Implement actual video download logic
-    // This would call the /videopage_analyze, /videopage_download, and /videopage_save endpoints
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    setIsProcessing(false);
+    try {
+      // Step 1: Analyze video
+      setDownloadStatus(t('download.analyzing'));
+      const analyzeResponse = await fetch('http://localhost:6800/videopage_analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+      
+      if (!analyzeResponse.ok) {
+        throw new Error('Failed to analyze video');
+      }
+      
+      const analyzeData = await analyzeResponse.json();
+      setDownloadProgress(33);
+      
+      // Step 2: Download video
+      setDownloadStatus(t('download.downloading'));
+      const downloadResponse = await fetch('http://localhost:6800/videopage_download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          url, 
+          format,
+          video_info: analyzeData 
+        }),
+      });
+      
+      if (!downloadResponse.ok) {
+        throw new Error('Failed to download video');
+      }
+      
+      const downloadData = await downloadResponse.json();
+      setDownloadProgress(66);
+      
+      // Step 3: Save video metadata
+      setDownloadStatus(t('download.saving'));
+      const saveResponse = await fetch('http://localhost:6800/videopage_save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...analyzeData,
+          ...downloadData,
+          format,
+        }),
+      });
+      
+      if (!saveResponse.ok) {
+        throw new Error('Failed to save video');
+      }
+      
+      setDownloadProgress(100);
+      setDownloadStatus(t('download.completed'));
+      
+      // Auto-refresh video lists after successful download
+      setTimeout(() => {
+        handleVideoImported();
+        setDownloadStatus('');
+        setDownloadProgress(0);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Download failed:', error);
+      setDownloadStatus(t('download.failed'));
+      setTimeout(() => {
+        setDownloadStatus('');
+        setDownloadProgress(0);
+      }, 3000);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleVideoImported = () => {
-    // Trigger video library refresh
+    // Trigger both video library and recent videos refresh
     if (videoLibraryRef.current) {
       videoLibraryRef.current.refreshVideos();
+    }
+    if (recentVideosRef.current) {
+      recentVideosRef.current.refreshVideos();
     }
   };
 

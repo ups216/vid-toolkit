@@ -234,13 +234,24 @@ async def analyze_video_page(request: VideoPageRequest):
             "--retry-sleep", "5"
         ]
         
-        # Use cookies file if available, otherwise fallback to browser cookies
+        # Use cookies file only, fail if not available
         if COOKIES_FILE.exists() and COOKIES_FILE.stat().st_size > 0:
             logger.info(f"Using cookies from file: {COOKIES_FILE}")
             cmd.extend(["--cookies", str(COOKIES_FILE)])
+            
+            # Add additional options to bypass bot detection
+            cmd.extend([
+                "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "--add-header", "Accept-Language:en-US,en;q=0.9",
+                "--sleep-interval", "1",
+                "--max-sleep-interval", "3"
+            ])
         else:
-            logger.info("No cookies file found, using browser cookies")
-            cmd.extend(["--cookies-from-browser", "chrome"])
+            logger.error(f"No cookies file found at {COOKIES_FILE} or file is empty")
+            raise HTTPException(
+                status_code=401,
+                detail="未找到有效的 cookies 文件。请先通过 /cookie API 上传 cookies 后再试。"
+            )
         
         cmd.append(request.url)
         
@@ -259,30 +270,43 @@ async def analyze_video_page(request: VideoPageRequest):
             logger.error(f"yt-dlp stderr: {result.stderr}")
             
             # Check for specific YouTube errors
-            if "Too Many Requests" in result.stderr or "429" in result.stderr:
-                raise HTTPException(
-                    status_code=429, 
-                    detail="YouTube rate limit exceeded. Please wait a few minutes before trying again."
-                )
-            elif "Sign in to confirm your age" in result.stderr:
+            if "Sign in to confirm you're not a bot" in result.stderr or "Sign in to confirm your age" in result.stderr:
+                logger.error(f"YouTube bot detection triggered: {result.stderr}")
                 raise HTTPException(
                     status_code=403,
-                    detail="This video requires age verification. Please sign into YouTube in your browser first."
+                    detail="YouTube 检测到机器人行为。请尝试以下解决方案：\n1. 在浏览器中访问 YouTube 并登录\n2. 重新导出并更新 cookies\n3. 等待几分钟后重试\n4. 尝试使用不同的视频 URL"
+                )
+            elif "Too Many Requests" in result.stderr or "429" in result.stderr:
+                raise HTTPException(
+                    status_code=429, 
+                    detail="YouTube 请求频率限制。请等待几分钟后重试。"
                 )
             elif "Video unavailable" in result.stderr or "Private video" in result.stderr:
                 raise HTTPException(
                     status_code=404,
-                    detail="Video is unavailable or private."
+                    detail="视频不可用或为私人视频。"
                 )
             elif "This live event will begin" in result.stderr:
                 raise HTTPException(
                     status_code=400,
-                    detail="This is a scheduled live stream that hasn't started yet."
+                    detail="这是一个尚未开始的预定直播。"
+                )
+            elif "Incomplete YouTube ID" in result.stderr or "looks truncated" in result.stderr:
+                raise HTTPException(
+                    status_code=400,
+                    detail="YouTube 视频 ID 不完整。请检查 URL 是否正确。"
+                )
+            elif "The following content is not available on this app" in result.stderr or "Watch on the latest version of YouTube" in result.stderr:
+                logger.error(f"YouTube content restriction: {result.stderr}")
+                raise HTTPException(
+                    status_code=403,
+                    detail="此内容在当前应用中不可用。这可能是由于：\n1. 视频有地区限制\n2. 视频需要特定的 YouTube 应用版本\n3. 内容提供商设置了访问限制\n\n建议尝试其他视频或稍后重试。"
                 )
             else:
+                logger.error(f"yt-dlp failed with unknown error: {result.stderr}")
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Failed to analyze URL: {result.stderr}"
+                    detail=f"分析视频失败: {result.stderr}"
                 )
         
         # Parse the JSON output
@@ -391,13 +415,16 @@ async def get_video_metadata_for_selection(request: VideoPageRequest):
             "--retry-sleep", "5"
         ]
         
-        # Use cookies file if available, otherwise fallback to browser cookies
+        # Use cookies file only, fail if not available
         if COOKIES_FILE.exists() and COOKIES_FILE.stat().st_size > 0:
             logger.info(f"Using cookies from file: {COOKIES_FILE}")
             cmd.extend(["--cookies", str(COOKIES_FILE)])
         else:
-            logger.info("No cookies file found, using browser cookies")
-            cmd.extend(["--cookies-from-browser", "chrome"])
+            logger.error(f"No cookies file found at {COOKIES_FILE} or file is empty")
+            raise HTTPException(
+                status_code=401,
+                detail="未找到有效的 cookies 文件。请先通过 /cookie API 上传 cookies 后再试。"
+            )
         
         cmd.append(request.url)
         
@@ -514,13 +541,16 @@ async def download_video_from_page(request: VideoDownloadRequest):
             "--retry-sleep", "5"
         ]
         
-        # Use cookies file if available, otherwise fallback to browser cookies
+        # Use cookies file only, fail if not available
         if COOKIES_FILE.exists() and COOKIES_FILE.stat().st_size > 0:
             logger.info(f"Using cookies from file for download: {COOKIES_FILE}")
             cmd.extend(["--cookies", str(COOKIES_FILE)])
         else:
-            logger.info("No cookies file found for download, using browser cookies")
-            cmd.extend(["--cookies-from-browser", "chrome"])
+            logger.error(f"No cookies file found at {COOKIES_FILE} or file is empty")
+            raise HTTPException(
+                status_code=401,
+                detail="未找到有效的 cookies 文件。请先通过 /cookie API 上传 cookies 后再试。"
+            )
         
         cmd.append(request.url)
         
@@ -559,7 +589,11 @@ async def download_video_from_page(request: VideoDownloadRequest):
             if COOKIES_FILE.exists() and COOKIES_FILE.stat().st_size > 0:
                 cmd_fallback.extend(["--cookies", str(COOKIES_FILE)])
             else:
-                cmd_fallback.extend(["--cookies-from-browser", "chrome"])
+                logger.error(f"No cookies file found for fallback download")
+                raise HTTPException(
+                    status_code=401,
+                    detail="未找到有效的 cookies 文件。请先通过 /cookie API 上传 cookies 后再试。"
+                )
             
             cmd_fallback.append(request.url)
             
@@ -768,14 +802,24 @@ async def save_video_to_library_auto_sync(request: VideoSaveRequest):
                 "yt-dlp",
                 "--dump-json",
                 "--no-download",
-                "--cookies-from-browser", "chrome",
                 "--extractor-args", "youtubetab:skip=authcheck",
                 "--no-playlist",
                 "--retries", "3",
                 "--fragment-retries", "3",
-                "--retry-sleep", "5",
-                request.video_url
+                "--retry-sleep", "5"
             ]
+            
+            # Use cookies file only, fail if not available
+            if COOKIES_FILE.exists() and COOKIES_FILE.stat().st_size > 0:
+                cmd.extend(["--cookies", str(COOKIES_FILE)])
+            else:
+                logger.error(f"No cookies file found for metadata sync")
+                raise HTTPException(
+                    status_code=401,
+                    detail="未找到有效的 cookies 文件。请先通过 /cookie API 上传 cookies 后再试。"
+                )
+            
+            cmd.append(request.video_url)
             
             result = subprocess.run(
                 cmd,
@@ -1071,14 +1115,24 @@ async def save_video_to_library(request: VideoSaveRequest):
                     "yt-dlp",
                     "--dump-json",
                     "--no-download",
-                    "--cookies-from-browser", "chrome",
                     "--extractor-args", "youtubetab:skip=authcheck",
                     "--no-playlist",
                     "--retries", "3",
                     "--fragment-retries", "3",
-                    "--retry-sleep", "5",
-                    request.video_url
+                    "--retry-sleep", "5"
                 ]
+                
+                # Use cookies file only, fail if not available
+                if COOKIES_FILE.exists() and COOKIES_FILE.stat().st_size > 0:
+                    cmd.extend(["--cookies", str(COOKIES_FILE)])
+                else:
+                    logger.error(f"No cookies file found for metadata fetch")
+                    raise HTTPException(
+                        status_code=401,
+                        detail="未找到有效的 cookies 文件。请先通过 /cookie API 上传 cookies 后再试。"
+                    )
+                
+                cmd.append(request.video_url)
                 
                 result = subprocess.run(
                     cmd,

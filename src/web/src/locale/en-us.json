@@ -71,15 +71,22 @@
       "updateButton": "Update Cookie",
       "updating": "Updating...",
       "updateSuccess": "Cookie updated successfully",
-      "updateError": "Cookie update failed, please try again",
+      "updateError": "Failed to update cookie, please try again",
       "noCookies": "No available cookies found",
       "note": "Click the button to get cookies from current browser and update to server"
     },
     "info": {
       "title": "About Cookie Configuration",
       "point1": "Cookies are used to access video content that requires login",
-      "point2": "Regular cookie updates can prevent download failures",
+      "point2": "Regularly updating cookies can avoid download failures",
       "point3": "Cookie data is only stored on the local server"
     }
+  },
+  "download": {
+    "analyzing": "Analyzing video...",
+    "downloading": "Downloading video...",
+    "saving": "Saving video...",
+    "completed": "Download completed!",
+    "failed": "Download failed, please try again"
   }
 }
