@@ -5,6 +5,7 @@
     "nav": {
       "home": "首页",
       "library": "库",
+      "config": "配置",
       "about": "关于"
     }
   },
@@ -60,5 +61,25 @@
     "browserNotSupported": "您的浏览器不支持视频标签。",
     "downloadVideo": "下载视频",
     "viewOriginal": "查看原始页面"
+  },
+  "config": {
+    "title": "配置设置",
+    "subtitle": "管理应用程序配置和设置",
+    "cookie": {
+      "title": "Cookie 管理",
+      "description": "更新浏览器 Cookie 以提升视频下载成功率",
+      "updateButton": "Update Cookie",
+      "updating": "更新中...",
+      "updateSuccess": "Cookie 更新成功",
+      "updateError": "Cookie 更新失败，请重试",
+      "noCookies": "未找到可用的Cookie",
+      "note": "点击按钮将从当前浏览器获取 Cookie 并更新到服务器"
+    },
+    "info": {
+      "title": "关于 Cookie 配置",
+      "point1": "Cookie 用于访问需要登录的视频内容",
+      "point2": "定期更新 Cookie 可以避免下载失败",
+      "point3": "Cookie 数据仅存储在本地服务器中"
+    }
   }
 }

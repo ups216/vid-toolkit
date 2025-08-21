@@ -4,8 +4,8 @@ import LanguageSwitcher from './LanguageSwitcher';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface HeaderProps {
-  currentPage?: 'home' | 'library';
-  onNavigate?: (page: 'home' | 'library') => void;
+  currentPage?: 'home' | 'library' | 'config';
+  onNavigate?: (page: 'home' | 'library' | 'config') => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ currentPage = 'home', onNavigate }) => {
@@ -59,6 +59,16 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'home', onNavigate }) => 
                 }`}
               >
                 {t('header.nav.library')}
+              </button>
+              <button 
+                onClick={() => handleNavigation('config')}
+                className={`transition-colors duration-200 ${
+                  currentPage === 'config' 
+                    ? 'text-blue-400' 
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                {t('header.nav.config')}
               </button>
               <a href="#" className="text-slate-300 hover:text-white transition-colors duration-200">
                 {t('header.nav.about')}
@@ -115,6 +125,16 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'home', onNavigate }) => 
                 }`}
               >
                 {t('header.nav.library')}
+              </button>
+              <button
+                onClick={() => handleNavigation('config')}
+                className={`block w-full text-left px-3 py-2 rounded-md transition-colors duration-200 ${
+                  currentPage === 'config' 
+                    ? 'text-blue-400 bg-slate-800/50' 
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                {t('header.nav.config')}
               </button>
               <a
                 href="#"

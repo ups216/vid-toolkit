@@ -50,6 +50,11 @@ class VideoSaveRequest(BaseModel):
     duration: Optional[float] = None
     age_limit: Optional[int] = None
 
+class CookieRequest(BaseModel):
+    cookies: List[Dict[str, str]]
+    domain: Optional[str] = None
+    format: Optional[str] = "netscape"  # netscape or json
+
 class VideoFormat(BaseModel):
     format_id: str
     ext: str
@@ -116,27 +121,128 @@ COOKIES_FILE = Path("cookies.txt")
 async def root():
     return {"message": "Video Toolkit API is running"}
 
+@app.post("/cookie")
+async def save_cookies(request: CookieRequest):
+    """Save cookie data to COOKIES_FILE in the required format for yt-dlp"""
+    try:
+        logger.info(f"Saving {len(request.cookies)} cookies to {COOKIES_FILE}")
+        
+        if request.format == "netscape":
+            # Netscape format for yt-dlp compatibility
+            # Format: domain	flag	path	secure	expiration	name	value
+            cookie_lines = ["# Netscape HTTP Cookie File"]
+            
+            for cookie in request.cookies:
+                domain = cookie.get('domain', request.domain or '.youtube.com')
+                name = cookie.get('name', '')
+                value = cookie.get('value', '')
+                path = cookie.get('path', '/')
+                secure = 'TRUE' if cookie.get('secure', False) else 'FALSE'
+                
+                # Handle expiration - if not provided, set to far future
+                expiration = cookie.get('expirationDate', '2147483647')  # Year 2038
+                if isinstance(expiration, str):
+                    try:
+                        expiration = int(expiration)
+                    except ValueError:
+                        expiration = 2147483647
+                
+                # Format: domain	flag	path	secure	expiration	name	value
+                # flag is TRUE for domain cookies, FALSE for host-only cookies
+                flag = 'TRUE' if domain.startswith('.') else 'FALSE'
+                
+                cookie_line = f"{domain}\t{flag}\t{path}\t{secure}\t{expiration}\t{name}\t{value}"
+                cookie_lines.append(cookie_line)
+            
+            # Write to cookies file
+            with open(COOKIES_FILE, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(cookie_lines))
+                
+        elif request.format == "json":
+            # JSON format (alternative format)
+            cookie_data = {
+                "cookies": request.cookies,
+                "domain": request.domain,
+                "updated_at": datetime.now().isoformat()
+            }
+            
+            with open(COOKIES_FILE.with_suffix('.json'), 'w', encoding='utf-8') as f:
+                json.dump(cookie_data, f, indent=2, ensure_ascii=False)
+        
+        return {
+            "message": f"Successfully saved {len(request.cookies)} cookies",
+            "format": request.format,
+            "file_path": str(COOKIES_FILE),
+            "cookies_count": len(request.cookies),
+            "domain": request.domain
+        }
+        
+    except Exception as e:
+        logger.error(f"Error saving cookies: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to save cookies: {str(e)}")
+
+@app.get("/cookie")
+async def get_cookies():
+    """Get current cookie information"""
+    try:
+        if COOKIES_FILE.exists():
+            file_size = COOKIES_FILE.stat().st_size
+            modified_time = datetime.fromtimestamp(COOKIES_FILE.stat().st_mtime).isoformat()
+            
+            # Count cookies in file
+            cookie_count = 0
+            with open(COOKIES_FILE, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip() and not line.startswith('#'):
+                        cookie_count += 1
+            
+            return {
+                "message": "Cookie file exists",
+                "file_path": str(COOKIES_FILE),
+                "file_size": file_size,
+                "modified_time": modified_time,
+                "cookies_count": cookie_count,
+                "exists": True
+            }
+        else:
+            return {
+                "message": "No cookie file found",
+                "file_path": str(COOKIES_FILE),
+                "exists": False,
+                "cookies_count": 0
+            }
+            
+    except Exception as e:
+        logger.error(f"Error reading cookies: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to read cookies: {str(e)}")
+
 @app.post("/videopage_analyze")
 async def analyze_video_page(request: VideoPageRequest):
     """Analyze a webpage URL to extract downloadable video information using yt-dlp"""
     try:
         logger.info(f"Analyzing video URL: {request.url}")
         
-        # Run yt-dlp to extract video information
+        # Prepare yt-dlp command with cookies
         cmd = [
             "yt-dlp",
             "--dump-json",
             "--no-download",
-            # Use cookies from browser (more convenient) or file-based cookies
-            "--cookies-from-browser", "chrome",
             "--extractor-args", "youtubetab:skip=authcheck",
             "--no-playlist",  # Only download single video, not playlist
             "--retries", "3",
             "--fragment-retries", "3",
-            "--retry-sleep", "5",
-            # Alternative: "--cookies", str(COOKIES_FILE),
-            request.url
+            "--retry-sleep", "5"
         ]
+        
+        # Use cookies file if available, otherwise fallback to browser cookies
+        if COOKIES_FILE.exists() and COOKIES_FILE.stat().st_size > 0:
+            logger.info(f"Using cookies from file: {COOKIES_FILE}")
+            cmd.extend(["--cookies", str(COOKIES_FILE)])
+        else:
+            logger.info("No cookies file found, using browser cookies")
+            cmd.extend(["--cookies-from-browser", "chrome"])
+        
+        cmd.append(request.url)
         
         logger.info(f"Running command: {' '.join(cmd)}")
         
@@ -273,19 +379,27 @@ async def get_video_metadata_for_selection(request: VideoPageRequest):
     try:
         logger.info(f"Getting metadata for URL: {request.url}")
         
-        # Run yt-dlp to extract video information
+        # Prepare yt-dlp command with cookies
         cmd = [
             "yt-dlp",
             "--dump-json",
             "--no-download",
-            "--cookies-from-browser", "chrome",
             "--extractor-args", "youtubetab:skip=authcheck",
             "--no-playlist",  # Only download single video, not playlist
             "--retries", "3",
             "--fragment-retries", "3",
-            "--retry-sleep", "5",
-            request.url
+            "--retry-sleep", "5"
         ]
+        
+        # Use cookies file if available, otherwise fallback to browser cookies
+        if COOKIES_FILE.exists() and COOKIES_FILE.stat().st_size > 0:
+            logger.info(f"Using cookies from file: {COOKIES_FILE}")
+            cmd.extend(["--cookies", str(COOKIES_FILE)])
+        else:
+            logger.info("No cookies file found, using browser cookies")
+            cmd.extend(["--cookies-from-browser", "chrome"])
+        
+        cmd.append(request.url)
         
         result = subprocess.run(
             cmd,
@@ -385,10 +499,7 @@ async def download_video_from_page(request: VideoDownloadRequest):
         if not download_tmp_dir.is_absolute():
             download_tmp_dir = Path.cwd() / download_tmp_dir
         
-        # Run yt-dlp to download the specific format with audio and thumbnail
-        # Use format selection that ensures both video and audio are included
-        # For Bilibili and other sites with separate video/audio streams
-        # Use safe filename without video title to avoid character issues
+        # Prepare yt-dlp download command with cookies
         cmd = [
             "yt-dlp",
             "--format", f"{request.format_id}+bestaudio[ext=m4a]/best",
@@ -396,16 +507,22 @@ async def download_video_from_page(request: VideoDownloadRequest):
             "--write-thumbnail",
             "--embed-metadata",
             "--keep-video",  # Keep video file temporarily for debugging
-            # Use cookies from browser (more convenient) or file-based cookies
-            "--cookies-from-browser", "chrome",
             "--extractor-args", "youtubetab:skip=authcheck",
             "--no-playlist",  # Only download single video, not playlist
             "--retries", "3",
             "--fragment-retries", "3",
-            "--retry-sleep", "5",
-            # Alternative: "--cookies", str(COOKIES_FILE),
-            request.url
+            "--retry-sleep", "5"
         ]
+        
+        # Use cookies file if available, otherwise fallback to browser cookies
+        if COOKIES_FILE.exists() and COOKIES_FILE.stat().st_size > 0:
+            logger.info(f"Using cookies from file for download: {COOKIES_FILE}")
+            cmd.extend(["--cookies", str(COOKIES_FILE)])
+        else:
+            logger.info("No cookies file found for download, using browser cookies")
+            cmd.extend(["--cookies-from-browser", "chrome"])
+        
+        cmd.append(request.url)
         
         logger.info(f"Running download command: {' '.join(cmd)}")
         
@@ -431,14 +548,20 @@ async def download_video_from_page(request: VideoDownloadRequest):
                 "--output", str(download_tmp_dir / f"{download_id}.%(ext)s"),
                 "--write-thumbnail",
                 "--embed-metadata",
-                "--cookies-from-browser", "chrome",
                 "--extractor-args", "youtubetab:skip=authcheck",
                 "--no-playlist",
                 "--retries", "3",
                 "--fragment-retries", "3",
-                "--retry-sleep", "5",
-                request.url
+                "--retry-sleep", "5"
             ]
+            
+            # Use same cookie logic for fallback
+            if COOKIES_FILE.exists() and COOKIES_FILE.stat().st_size > 0:
+                cmd_fallback.extend(["--cookies", str(COOKIES_FILE)])
+            else:
+                cmd_fallback.extend(["--cookies-from-browser", "chrome"])
+            
+            cmd_fallback.append(request.url)
             
             logger.info(f"Running fallback command: {' '.join(cmd_fallback)}")
             

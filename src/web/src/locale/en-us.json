@@ -5,6 +5,7 @@
     "nav": {
       "home": "Home",
       "library": "Library",
+      "config": "Config",
       "about": "About"
     }
   },
@@ -60,5 +61,25 @@
     "noFormats": "No video formats available for this URL",
     "processing": "Processing...",
     "importVideo": "Import Video"
+  },
+  "config": {
+    "title": "Configuration Settings",
+    "subtitle": "Manage application configuration and settings",
+    "cookie": {
+      "title": "Cookie Management",
+      "description": "Update browser cookies to improve video download success rate",
+      "updateButton": "Update Cookie",
+      "updating": "Updating...",
+      "updateSuccess": "Cookie updated successfully",
+      "updateError": "Cookie update failed, please try again",
+      "noCookies": "No available cookies found",
+      "note": "Click the button to get cookies from current browser and update to server"
+    },
+    "info": {
+      "title": "About Cookie Configuration",
+      "point1": "Cookies are used to access video content that requires login",
+      "point2": "Regular cookie updates can prevent download failures",
+      "point3": "Cookie data is only stored on the local server"
+    }
   }
 }

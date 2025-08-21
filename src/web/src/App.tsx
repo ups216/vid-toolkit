@@ -4,6 +4,7 @@ import VideoInput from './components/VideoInput';
 import VideoPlayer from './components/VideoPlayer';
 import RecentVideos from './components/RecentVideos';
 import LibraryPage from './components/LibraryPage';
+import ConfigPage from './components/ConfigPage';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 
 interface Video {
@@ -116,6 +117,10 @@ function AppContent() {
 
       {currentPage === 'library' && (
         <LibraryPage />
+      )}
+
+      {currentPage === 'config' && (
+        <ConfigPage />
       )}
 
       {/* Video Player Modal */}
